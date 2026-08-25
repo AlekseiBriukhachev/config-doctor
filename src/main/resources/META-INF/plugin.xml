@@ -1,46 +1,25 @@
-<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
     <id>com.aleksei.config-doctor</id>
+    <name>Config Doctor</name>
+    <vendor url="https://github.com/AlekseiBriukhachev/config-doctor" email="aleksei.develop@gmail.com">AleksDev</vendor>
 
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Config-Doctor</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="aleksei.develop@gmail.com">AleksDev</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-   Enter short description for your plugin here.<br>
-   <em>most HTML tags may be used</em>
- ]]></description>
+        Config Doctor detects suspicious Spring Boot YAML configuration
+        structures (for example, an accidentally duplicated nesting level,
+        such as spring.datasource.datasource.url instead of
+        spring.datasource.url) before the application is started.
+        <br/><br/>
+        This build is a Stage 2 project skeleton per AGENTS.md: no
+        inspection or analysis logic is implemented yet. Its only purpose
+        is to prove the plugin loads cleanly in the IDE sandbox.
+    ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <!-- Config Doctor's core job is analyzing YAML PSI, so it depends on
+         the bundled YAML plugin. -->
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.kotlin</depends>
 
-
-    <!-- Extension points defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-
+        <postStartupActivity implementation="com.aleksei.configdoctor.plugin.ConfigDoctorStartupActivity"/>
     </extensions>
-
-
-    <!-- тут описываются команды или слушатели ide на которые должен реалигровать плагин
-    В нашем примере мы создаим одно действие для генерации шаблона
- -->
-    <actions>
-        <action id="GenerateCleanCode.NewAction"
-                icon="/META-INF/pluginIcon.svg"
-                class="com.aleksei.configdoctor.GenerateFolderStructureAction"
-                text="Create New Feature">
-            <add-to-group group-id="NewGroup" anchor="last"/>
-        </action>
-    </actions>
-
 </idea-plugin>
