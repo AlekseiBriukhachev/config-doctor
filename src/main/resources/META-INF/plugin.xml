@@ -5,26 +5,42 @@
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Config-doctor</name>
+    <name>Config-Doctor</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="aleksei.develop@gmail.com">AleksDev</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-  ]]></description>
+   Enter short description for your plugin here.<br>
+   <em>most HTML tags may be used</em>
+ ]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
 
     </extensions>
+
+
+    <!-- тут описываются команды или слушатели ide на которые должен реалигровать плагин
+    В нашем примере мы создаим одно действие для генерации шаблона
+ -->
+    <actions>
+        <action id="GenerateCleanCode.NewAction"
+                icon="/META-INF/pluginIcon.svg"
+                class="com.aleksei.configdoctor.GenerateFolderStructureAction"
+                text="Create New Feature">
+            <add-to-group group-id="NewGroup" anchor="last"/>
+        </action>
+    </actions>
+
 </idea-plugin>
