@@ -4,7 +4,7 @@ fun properties(key: String) = providers.gradleProperty(key)
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.25"
+    id("org.jetbrains.kotlin.jvm") version "2.1.0"
     id("org.jetbrains.intellij.platform") version "2.18.1"
 }
 
@@ -20,12 +20,8 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Generic form so platformType/platformVersion in gradle.properties
-        // keep working exactly as they did with the 1.x plugin (IC, IU, etc.).
         create(properties("platformType"), properties("platformVersion"))
-
-        // Comma-separated list in gradle.properties, e.g.
-        // "com.intellij.java, org.jetbrains.plugins.yaml". Empty for now.
+        bundledPlugin("org.jetbrains.plugins.yaml")
         plugins(properties("platformPlugins").map {
             it.split(',').map(String::trim).filter(String::isNotEmpty)
         })
@@ -33,6 +29,15 @@ dependencies {
         pluginVerifier()
         testFramework(TestFrameworkType.Platform)
     }
+
+        // NEW - workaround for JetBrains-acknowledged bugs in
+        // TestFrameworkType.Platform (IntelliJ Platform Gradle Plugin 2.x):
+        //   - IJPL-159134: junit.framework.TestCase not resolved
+        //     (BasePlatformTestCase needs it - this is what broke our test).
+        //   - IJPL-157292: opentest4j not resolved.
+        // See: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-faq.html
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 kotlin {
