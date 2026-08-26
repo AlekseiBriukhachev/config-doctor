@@ -1,0 +1,25 @@
+<idea-plugin>
+    <id>com.aleksei.config-doctor</id>
+    <name>Config Doctor</name>
+    <vendor url="https://github.com/AlekseiBriukhachev/config-doctor" email="aleksei.develop@gmail.com">AleksDev</vendor>
+
+    <description><![CDATA[
+        Config Doctor detects suspicious Spring Boot YAML configuration
+        structures (for example, an accidentally duplicated nesting level,
+        such as spring.datasource.datasource.url instead of
+        spring.datasource.url) before the application is started.
+        <br/><br/>
+        This build is a Stage 2 project skeleton per AGENTS.md: no
+        inspection or analysis logic is implemented yet. Its only purpose
+        is to prove the plugin loads cleanly in the IDE sandbox.
+    ]]></description>
+
+    <!-- Config Doctor's core job is analyzing YAML PSI, so it depends on
+         the bundled YAML plugin. -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.aleksei.configdoctor.plugin.ConfigDoctorStartupActivity"/>
+    </extensions>
+</idea-plugin>
