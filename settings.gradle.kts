@@ -1,1 +1,8 @@
-rootProject.name = "config-doctor"
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "config_doctor"
