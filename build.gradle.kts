@@ -1,13 +1,15 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
+fun properties(key: String) = providers.gradleProperty(key)
+
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.0.21"
+    id("org.jetbrains.kotlin.jvm") version "2.1.0"
     id("org.jetbrains.intellij.platform") version "2.18.1"
 }
 
-group = "com.aleksei"
-version = "1.0-SNAPSHOT"
+group = properties("pluginGroup").get()
+version = properties("pluginVersion").get()
 
 repositories {
     mavenCentral()
@@ -18,40 +20,57 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // The IDE Config Doctor is built and sandbox-tested against.
-        intellijIdeaCommunity("2024.2")
-
-        // Config Doctor's whole purpose is analyzing YAML, so it depends on
-        // the bundled YAML plugin for PSI access. No analyzer logic is
-        // implemented at this stage - this is only the dependency wiring.
+        create(properties("platformType"), properties("platformVersion"))
         bundledPlugin("org.jetbrains.plugins.yaml")
+        plugins(properties("platformPlugins").map {
+            it.split(',').map(String::trim).filter(String::isNotEmpty)
+        })
 
-        // Standard IntelliJ Platform plugin tooling.
         pluginVerifier()
         testFramework(TestFrameworkType.Platform)
     }
 
-    testImplementation(kotlin("test"))
+        // NEW - workaround for JetBrains-acknowledged bugs in
+        // TestFrameworkType.Platform (IntelliJ Platform Gradle Plugin 2.x):
+        //   - IJPL-159134: junit.framework.TestCase not resolved
+        //     (BasePlatformTestCase needs it - this is what broke our test).
+        //   - IJPL-157292: opentest4j not resolved.
+        // See: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-faq.html
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 intellijPlatform {
     pluginConfiguration {
-        name = "Config Doctor"
-        version = project.version.toString()
+        name = properties("pluginName")
+        version = properties("pluginVersion")
 
         ideaVersion {
-            sinceBuild = "242"
-            untilBuild = "251.*"
+            sinceBuild = properties("pluginSinceBuild")
+            // untilBuild intentionally left unset (see gradle.properties) to
+            // keep the plugin forward-compatible with newer IDE builds.
+            untilBuild = provider { null }
         }
+    }
+
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
+
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
     }
 }
 
 tasks {
-    test {
-        useJUnitPlatform()
+    withType<JavaCompile> {
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
 }

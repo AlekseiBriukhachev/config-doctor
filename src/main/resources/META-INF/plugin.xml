@@ -17,7 +17,7 @@
     <!-- Config Doctor's core job is analyzing YAML PSI, so it depends on
          the bundled YAML plugin. -->
     <depends>com.intellij.modules.platform</depends>
-    <depends>org.jetbrains.kotlin</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.aleksei.configdoctor.plugin.ConfigDoctorStartupActivity"/>
