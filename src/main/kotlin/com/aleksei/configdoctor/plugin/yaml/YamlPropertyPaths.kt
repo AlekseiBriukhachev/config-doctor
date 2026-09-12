@@ -58,20 +58,29 @@ object YamlPropertyPaths {
      * A YAML file may contain multiple documents (separated by `---`);
      * all of them are walked.
      */
-    fun leafPathsOf(file: YAMLFile): List<PropertyPath> {
-        val result = ArrayList<PropertyPath>()
+    fun leafPathsOf(file: YAMLFile): List<PropertyPath> =
+        leafKeyValuesOf(file).map { pathOf(it) }
+
+    /**
+     * Same traversal as leafPathsOf, but returns the underlying
+     * YAMLKeyValue elements themselves - needed to build ConfigProperty
+     * (Stage 5), which requires the PSI element and the raw value text,
+     * not just the path.
+     */
+    fun leafKeyValuesOf(file: YAMLFile): List<YAMLKeyValue> {
+        val result = ArrayList<YAMLKeyValue>()
         for (document in file.documents) {
             val topMapping = document.topLevelValue as? YAMLMapping ?: continue
-            collectLeaves(topMapping, result)
+            collectLeafKeyValues(topMapping, result)
         }
         return result
     }
 
-    private fun collectLeaves(mapping: YAMLMapping, out: ArrayList<PropertyPath>) {
+    private fun collectLeafKeyValues(mapping: YAMLMapping, out: MutableList<YAMLKeyValue>) {
         for (keyValue in mapping.keyValues) {
             when (val value: YAMLValue? = keyValue.value) {
-                is YAMLMapping -> collectLeaves(value, out)
-                else -> out.add(pathOf(keyValue))
+                is YAMLMapping -> collectLeafKeyValues(value, out)
+                else -> out.add(keyValue)
             }
         }
     }
@@ -91,4 +100,23 @@ object YamlPropertyPaths {
         }
         return null
     }
+
+    /**
+     * Builds a ConfigProperty (Stage 5 / AGENTS.md section 12) for every
+     * leaf key in [yamlFile], attributing it to [configFile] (for
+     * sourceFile/profile).
+     */
+    fun leafConfigPropertiesOf(
+        configFile: com.aleksei.configdoctor.plugin.model.ConfigFile,
+        yamlFile: YAMLFile
+    ): List<com.aleksei.configdoctor.plugin.model.ConfigProperty> =
+        leafKeyValuesOf(yamlFile).map { keyValue ->
+            com.aleksei.configdoctor.plugin.model.ConfigProperty(
+                path = pathOf(keyValue),
+                value = keyValue.valueText.ifEmpty { null },
+                sourceFile = configFile.virtualFile,
+                psiElement = keyValue,
+                profile = configFile.profile
+            )
+        }
 }
