@@ -116,6 +116,49 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
         assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
     }
 
+    fun `test a property existing only in a profile file is not itself an error - AGENTS section 20`() {
+        // AGENTS.md section 20 explicitly forbids the rule "if a profile
+        // property is absent from the base file, show a warning" - a
+        // profile-only property (with no duplicated segment at all) must
+        // never be flagged, regardless of whether a same-named property
+        // exists in the base file.
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/application-local.yml",
+            """
+            server:
+              port: 8080
+            debug:
+              verbose-logging: true
+            """.trimIndent()
+        )
+
+        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+    }
+
+    fun `test a duplicated segment that is itself the intended property shape is not flagged`() {
+        // A property that legitimately contains a repeated word as a
+        // deliberate, single, real property (not two nested keys with the
+        // same name) must not be affected - the detector only ever looks at
+        // adjacent YAML *key* segments, never substrings of a single key.
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            app:
+              retry-retry-policy:
+                max-attempts: 3
+            """.trimIndent()
+        )
+
+        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+    }
+
     private fun collectAllProperties(): List<ConfigProperty> {
         val configFiles = ConfigFileDiscovery.findConfigFiles(project)
         val psiManager = PsiManager.getInstance(project)
