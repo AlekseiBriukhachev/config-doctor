@@ -21,5 +21,13 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.aleksei.configdoctor.plugin.ConfigDoctorStartupActivity"/>
+        <localInspection
+                language="yaml"
+                shortName="SuspiciousConfigPath"
+                displayName="Suspicious Spring Boot configuration path"
+                groupName="Spring Boot"
+                enabledByDefault="true"
+                level="WARNING"
+                implementationClass="com.aleksei.configdoctor.plugin.inspection.SuspiciousConfigPathInspection"/>
     </extensions>
 </idea-plugin>
