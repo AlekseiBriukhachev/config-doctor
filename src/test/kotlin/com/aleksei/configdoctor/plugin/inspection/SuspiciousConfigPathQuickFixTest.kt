@@ -16,7 +16,7 @@ class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
 
     fun `test applying the quick fix collapses the duplicated segment`() {
         myFixture.addFileToProject(
-            "src/main/resources/application.yml",
+            "src/main/resources/application.ONLINE.yml",
             """
             spring:
               datasource:
@@ -29,7 +29,7 @@ class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
             spring:
               datasource:
                 datasource:
-                  url: jdbc:postgresql://localhost/db
+                  <caret>url: jdbc:postgresql://localhost/db
             """.trimIndent()
         )
 

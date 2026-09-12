@@ -35,7 +35,32 @@ class SuspiciousConfigPathInspectionTest : BasePlatformTestCase() {
         val message = warnings.single().description
         assertTrue(message.contains("spring.datasource.datasource.url"))
         assertTrue(message.contains("spring.datasource.url"))
-        // Section 18: message communicates uncertainty, not a hard claim.
+        assertTrue(message.contains("Suspicious"))
+    }
+
+    fun `test warns on a shifted non-duplicate segment when the collapsed path already exists`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            spring:
+              name: config-doctor-demo
+            """.trimIndent()
+        )
+        myFixture.configureByText(
+            "application-local.yml",
+            """
+            spring:
+              application:
+                name: config-doctor-demo
+            """.trimIndent()
+        )
+
+        val warnings = myFixture.doHighlighting(HighlightSeverity.WARNING)
+
+        assertEquals(1, warnings.size)
+        val message = warnings.single().description
+        assertTrue(message.contains("spring.application.name"))
+        assertTrue(message.contains("spring.name"))
         assertTrue(message.contains("Suspicious"))
     }
 

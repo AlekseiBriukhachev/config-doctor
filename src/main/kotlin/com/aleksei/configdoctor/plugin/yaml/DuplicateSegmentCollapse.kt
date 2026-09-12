@@ -4,6 +4,16 @@ import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
 
 /**
+ * Stage 7 (AGENTS.md section 19): decides whether a suspicious path can be
+ * safely and unambiguously collapsed by a Quick Fix.
+ *
+ * The same safety rule is used for both duplicate-segment and shifted-segment
+ * mistakes: only a single wrapper layer is considered safe to collapse if the
+ * outer key's mapping contains exactly one child. If the ancestor chain has no
+ * such position, or more than one candidate position, this returns null and no
+ * fix should be offered.
+ */
+/**
  * Stage 7 (AGENTS.md section 19): decides whether the duplicated-adjacent-
  * segment pattern found by SuspiciousPathDetector (Stage 5) can be safely
  * and unambiguously collapsed by a Quick Fix.

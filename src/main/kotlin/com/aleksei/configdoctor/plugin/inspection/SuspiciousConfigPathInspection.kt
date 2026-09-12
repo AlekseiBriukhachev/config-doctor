@@ -57,7 +57,7 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         val project = holder.project
         val findings: List<SuspiciousPathFinding> by lazy {
-            SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllConfigProperties(project))
+            SuspiciousPathDetector.findSuspiciousPaths(collectAllConfigProperties(project))
         }
 
         return object : PsiElementVisitor() {
@@ -92,7 +92,7 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
      */
     private fun buildMessage(finding: SuspiciousPathFinding): String {
         return "Suspicious configuration path '${finding.actual.path}'. " +
-            "It may be an accidental duplication of the existing property " +
+            "It may be an accidental misplacement or duplication of the existing property " +
             "'${finding.relatedExpected.path}'. ${finding.evidence}"
     }
 

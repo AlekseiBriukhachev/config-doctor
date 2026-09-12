@@ -1,5 +1,7 @@
 package com.aleksei.configdoctor.plugin.yaml
 
+import com.aleksei.configdoctor.plugin.model.ConfigFile
+import com.aleksei.configdoctor.plugin.model.ConfigProperty
 import com.aleksei.configdoctor.plugin.model.PropertyPath
 import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLFile
@@ -125,11 +127,11 @@ object YamlPropertyPaths {
      * sourceFile/profile).
      */
     fun leafConfigPropertiesOf(
-        configFile: com.aleksei.configdoctor.plugin.model.ConfigFile,
+        configFile: ConfigFile,
         yamlFile: YAMLFile
-    ): List<com.aleksei.configdoctor.plugin.model.ConfigProperty> =
+    ): List<ConfigProperty> =
         leafKeyValuesOf(yamlFile).map { keyValue ->
-            com.aleksei.configdoctor.plugin.model.ConfigProperty(
+            ConfigProperty(
                 path = pathOf(keyValue),
                 value = keyValue.valueText.ifEmpty { null },
                 sourceFile = configFile.virtualFile,

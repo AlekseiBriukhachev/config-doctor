@@ -1,8 +1,8 @@
 # Config Doctor
 
 An IntelliJ IDEA plugin that detects suspicious Spring Boot YAML
-configuration structures (such as an accidentally duplicated nesting
-level) before the application is started.
+configuration structures (such as an accidentally duplicated or shifted
+nesting level) before the application is started.
 
 ## Current status: Stage 10 — implementation & automated tests complete; manual real-project sign-off outstanding
 
@@ -15,19 +15,19 @@ all of `CLAUDE.md`'s stages:
 2. **Extracts** every leaf configuration property path from each file
    using YAML PSI (no raw-text/indentation parsing).
 3. **Detects** a specific, evidence-based mistake: a property path that
-   contains a duplicated adjacent segment (e.g.
-   `spring.datasource.datasource.url`) where removing the duplicate
-   yields a path that is an *actual, currently-used* property elsewhere
-   in the project (e.g. `spring.datasource.url`). This is the real-world
-   mistake described in `CLAUDE.md` sections 3 and 14.
+   collapses to a real, currently-used property elsewhere in the project
+   when one nested segment is removed. This covers both the original
+   duplicate-adjacent pattern (e.g. `spring.datasource.datasource.url` ->
+   `spring.datasource.url`) and a shifted wrapper segment (e.g.
+   `spring.application.name` -> `spring.name`).
 4. **Reports** a `WARNING`-level inspection ("Suspicious Spring Boot
    configuration path") that explains the actual path, the related
    expected path, and why the relationship is suspicious.
 5. **Offers a Quick Fix** ("Collapse duplicated configuration segment")
-   that safely collapses the duplicated level via PSI — but only when
-   the duplicated level has no sibling keys, so nothing can be lost or
-   silently merged. If the fix would be ambiguous or lossy, no fix is
-   offered (the warning still is).
+   that safely collapses the redundant nesting level via PSI — but only
+   when there is exactly one unambiguous wrapper to remove, so nothing can
+   be lost or silently merged. If the fix would be ambiguous or lossy, no
+   fix is offered (the warning still is).
 
 **Honesty note (see `docs/STAGE9_VALIDATION.md` and
 `docs/STAGE10_MVP_DECISION.md` for full detail):** in the environment this

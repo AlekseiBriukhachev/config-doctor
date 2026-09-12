@@ -39,6 +39,8 @@ class RealisticSpringBootProjectValidationTest : BasePlatformTestCase() {
         myFixture.addFileToProject("src/main/resources/application.yml", BASE_APPLICATION_YML)
         myFixture.addFileToProject("src/main/resources/application-local.yml", LOCAL_APPLICATION_YML)
         myFixture.addFileToProject("src/main/resources/application-prod.yml", PROD_APPLICATION_YML)
+        myFixture.addFileToProject("src/main/resources/application.ODD.ONLINE.yml", BASE_APPLICATION_YML)
+        myFixture.addFileToProject("src/main/resources/application.ONLINE.yml", BASE_APPLICATION_YML)
         // logback.xml/yml-style unrelated config file: must be ignored entirely.
         myFixture.addFileToProject("src/main/resources/logback.yml", "root: INFO\nappenders:\n  appenders:\n    type: console\n")
 
@@ -67,10 +69,12 @@ class RealisticSpringBootProjectValidationTest : BasePlatformTestCase() {
         // mistake in application-test.yml, not from an interaction with
         // some other file's content.
         val baseFile = myFixture.addFileToProject("src/main/resources/application.yml", BASE_APPLICATION_YML)
+        val onlineFile = myFixture.addFileToProject("src/main/resources/application.ONLINE.yml", BASE_APPLICATION_YML)
+        val oddOnlineFile = myFixture.addFileToProject("src/main/resources/application.ODD.ONLINE.yml", BASE_APPLICATION_YML)
         val localFile = myFixture.addFileToProject("src/main/resources/application-local.yml", LOCAL_APPLICATION_YML)
         val prodFile = myFixture.addFileToProject("src/main/resources/application-prod.yml", PROD_APPLICATION_YML)
 
-        listOf(baseFile, localFile, prodFile).forEach { file ->
+        listOf(baseFile, onlineFile, oddOnlineFile, localFile, prodFile).forEach { file ->
             myFixture.configureFromExistingVirtualFile(file.virtualFile)
             val warnings = myFixture.doHighlighting(HighlightSeverity.WARNING)
             assertTrue("Expected no warnings in ${file.name}, but found: $warnings", warnings.isEmpty())
