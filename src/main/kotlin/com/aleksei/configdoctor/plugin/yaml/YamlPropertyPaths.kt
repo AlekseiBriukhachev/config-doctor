@@ -49,6 +49,24 @@ object YamlPropertyPaths {
     }
 
     /**
+     * The full ancestor chain of [keyValue], ordered from the outermost
+     * enclosing key down to [keyValue] itself - the same order as the
+     * segments returned by pathOf(keyValue). Used by Stage 7's Quick Fix
+     * to locate exactly which ancestor PSI element corresponds to which
+     * path segment.
+     */
+    fun ancestorChainOf(keyValue: YAMLKeyValue): List<YAMLKeyValue> {
+        val chain = ArrayList<YAMLKeyValue>()
+        var current: YAMLKeyValue? = keyValue
+        while (current != null) {
+            chain.add(current)
+            current = current.enclosingKeyValue()
+        }
+        chain.reverse()
+        return chain
+    }
+
+    /**
      * Walks an entire YAML file and returns the property path for every
      * "leaf" key: a key whose value is a scalar, a sequence, or missing/
      * empty. Keys whose value is itself a mapping are internal nodes and

@@ -15,6 +15,7 @@ import com.intellij.psi.PsiManager
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
+import com.aleksei.configdoctor.plugin.yaml.DuplicateSegmentCollapse
 
 /**
  * Stage 6 (AGENTS.md section 17): the first real IntelliJ inspection.
@@ -68,10 +69,17 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
 
                 val finding = findings.firstOrNull { it.actual.psiElement == keyValue } ?: return
 
+                // Section 19: only offer the fix when a single, unambiguous, lossless
+                // collapse position was found - independent from "is it suspicious".
+                val fix = DuplicateSegmentCollapse.findSafeCollapse(keyValue)?.let { (outer, duplicate) ->
+                    CollapseDuplicatedSegmentFix(outer, duplicate)
+                }
+
                 holder.registerProblem(
                     keyValue,
                     buildMessage(finding),
-                    ProblemHighlightType.WARNING
+                    ProblemHighlightType.WARNING,
+                    *listOfNotNull(fix).toTypedArray()
                 )
             }
         }
