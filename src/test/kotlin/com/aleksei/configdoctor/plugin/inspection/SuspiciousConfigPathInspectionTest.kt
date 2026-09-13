@@ -64,6 +64,31 @@ class SuspiciousConfigPathInspectionTest : BasePlatformTestCase() {
         assertTrue(message.contains("Suspicious"))
     }
 
+    fun `test warns when a profile property does not override its base counterpart`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.configureByText(
+            "application-local.yml",
+            """
+            server:
+              ports: 8081
+            """.trimIndent()
+        )
+
+        val warnings = myFixture.doHighlighting(HighlightSeverity.WARNING)
+
+        assertEquals(1, warnings.size)
+        val message = warnings.single().description
+        assertTrue(message.contains("server.ports"))
+        assertTrue(message.contains("server.port"))
+        assertTrue(message.contains("does not override"))
+    }
+
     fun `test no warning when the property is correctly structured`() {
         myFixture.addFileToProject(
             "src/main/resources/application.yml",

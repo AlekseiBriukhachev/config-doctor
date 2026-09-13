@@ -8,12 +8,11 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jetbrains.yaml.psi.YAMLFile
 
 /**
- * AGENTS.md section 14 (Stage 5): "Create a test case based on the real
- * datasource example." This test builds ConfigProperty the same way real
- * usage would - by running Stage 4 discovery, then Stage 3 extraction,
- * then handing the result to the Stage 5 detector - rather than
- * constructing ConfigProperty by hand, so the whole pipeline is actually
- * exercised together.
+ * Exercises the full property-discovery pipeline for the real-world datasource
+ * mis-nesting case.
+ *
+ * The test collects YAML files from the project, extracts nested property paths,
+ * and confirms that the detector finds only the intentionally broken property.
  */
 class SuspiciousPathDetectorTest : BasePlatformTestCase() {
 
@@ -36,7 +35,7 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val findings = SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties())
+        val findings = SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties())
 
         assertEquals(1, findings.size)
         val finding = findings.single()
@@ -70,7 +69,27 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+        assertTrue(SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties()).isEmpty())
+    }
+
+    fun `test a profile override mismatch with the same parent path but a different leaf is flagged`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/application-local.yml",
+            """
+            server:
+              ports: 8081
+            """.trimIndent()
+        )
+
+        val findings = SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties())
+        assertTrue(findings.any { it.actual.path.toString() == "server.ports" && it.relatedExpected.path.toString() == "server.port" })
     }
 
     fun `test duplicated segment with no matching real property is not flagged`() {
@@ -86,7 +105,7 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+        assertTrue(SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties()).isEmpty())
     }
 
     fun `test a shifted (non-duplicate) section is flagged when the collapsed path already exists`() {
@@ -112,12 +131,11 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
         assertEquals("spring.name", findings.single().relatedExpected.path.toString())
     }
 
-    fun `test a property existing only in a profile file is not itself an error - AGENTS section 20`() {
-        // AGENTS.md section 20 explicitly forbids the rule "if a profile
-        // property is absent from the base file, show a warning" - a
-        // profile-only property (with no duplicated segment at all) must
-        // never be flagged, regardless of whether a same-named property
-        // exists in the base file.
+    fun `test a profile-only property is not itself an error`() {
+        // A profile-only property must never be flagged just because the base
+        // file has a different path with a similar name. The detector only
+        // warns when there is a concrete structural mismatch to a real
+        // project property.
         myFixture.addFileToProject(
             "src/main/resources/application.yml",
             """
@@ -135,7 +153,7 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+        assertTrue(SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties()).isEmpty())
     }
 
     fun `test a duplicated segment that is itself the intended property shape is not flagged`() {
@@ -152,7 +170,7 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+        assertTrue(SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties()).isEmpty())
     }
 
     private fun collectAllProperties(): List<ConfigProperty> {

@@ -11,7 +11,9 @@ all of `CLAUDE.md`'s stages:
 
 1. **Discovers** Spring Boot configuration files (`application.yml`,
    `application.yaml`, and their `application-{profile}.yml(.yaml)`
-   variants) anywhere in the project.
+   variants, including dot-qualified override names such as
+   `application.ONLINE.yml` and `application.ONLINE.LOCAL.yml`) anywhere
+   in the project.
 2. **Extracts** every leaf configuration property path from each file
    using YAML PSI (no raw-text/indentation parsing).
 3. **Detects** a specific, evidence-based mistake: a property path that

@@ -1,47 +1,26 @@
 package com.aleksei.configdoctor.plugin.yaml
 
+import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
 
 /**
- * Stage 7 (AGENTS.md section 19): decides whether a suspicious path can be
- * safely and unambiguously collapsed by a Quick Fix.
+ * Decides whether a suspicious YAML key can be fixed by removing one redundant
+ * nesting layer.
  *
- * The same safety rule is used for both duplicate-segment and shifted-segment
- * mistakes: only a single wrapper layer is considered safe to collapse if the
- * outer key's mapping contains exactly one child. If the ancestor chain has no
- * such position, or more than one candidate position, this returns null and no
- * fix should be offered.
- */
-/**
- * Stage 7 (AGENTS.md section 19): decides whether the duplicated-adjacent-
- * segment pattern found by SuspiciousPathDetector (Stage 5) can be safely
- * and unambiguously collapsed by a Quick Fix.
- *
- * A collapse at a given ancestor position is only considered SAFE when
- * the outer key's mapping contains that duplicate key as its ONLY child -
- * i.e. nothing else exists at that level that could be lost or would need
- * merging. If the ancestor chain contains no such position, or more than
- * one candidate position, this returns null and no fix should be offered:
- *
- *   AGENTS.md section 19: "If there are multiple plausible fixes: Do not
- *   automatically modify the file."
- *
- * Note this is deliberately independent of SuspiciousPathDetector: a path
- * can be flagged as suspicious (a real path collision exists) while still
- * having no *safe* fix (e.g. the duplicate level has sibling keys) - the
- * warning and the fix have different, separately-checked safety bars.
+ * The fix is only offered when there is exactly one unambiguous wrapper node
+ * in the ancestor chain. If the parent mapping has siblings or there are
+ * multiple collapse candidates, the method returns null and the inspection does
+ * not suggest a rewrite.
  */
 object DuplicateSegmentCollapse {
 
     /**
-     * Given the leaf key value that was flagged as suspicious, walks its
-     * ancestor chain (root to leaf) looking for a single safely
-     * collapsible duplicated segment.
+     * Walks the ancestor chain of a flagged key and returns the single safe
+     * collapse point, if any.
      *
-     * Returns (outerKeyValue, duplicateKeyValue): collapsing means
-     * replacing outerKeyValue's mapping value with duplicateKeyValue's
-     * value, removing the redundant nesting level entirely.
+     * The returned pair is `(outerKeyValue, innerKeyValue)`: the outer mapping
+     * is the redundant wrapper that can be replaced by the inner value.
      */
     fun findSafeCollapse(leaf: YAMLKeyValue): Pair<YAMLKeyValue, YAMLKeyValue>? {
         val chain = YamlPropertyPaths.ancestorChainOf(leaf)
@@ -50,15 +29,27 @@ object DuplicateSegmentCollapse {
         for (i in 0 until chain.size - 1) {
             val outer = chain[i]
             val inner = chain[i + 1]
-            if (outer.keyText != inner.keyText) continue
+
+            if (outer.isDocumentRootWrapper()) continue // ignore the document-root wrapper
 
             val outerMapping = outer.value as? YAMLMapping ?: continue
             if (outerMapping.keyValues.singleOrNull() != inner) continue // has siblings -> unsafe
+            if (inner.value !is YAMLMapping) continue // collapsing a scalar leaf would not remove a wrapper
 
             if (found != null) return null // a second candidate position -> ambiguous, refuse entirely
             found = outer to inner
         }
 
         return found
+    }
+
+    private fun YAMLKeyValue.isDocumentRootWrapper(): Boolean {
+        var current = this.parent
+        while (current != null) {
+            if (current is YAMLKeyValue) return false
+            if (current is YAMLDocument) return true
+            current = current.parent
+        }
+        return true
     }
 }

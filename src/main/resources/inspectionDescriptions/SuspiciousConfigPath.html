@@ -1,0 +1,35 @@
+<html lang="en">
+<body>
+<p>
+    Reports YAML property paths that look like an accidental extra nesting level or duplicated segment,
+    such as <code>spring.datasource.datasource.url</code> when the project already contains
+    <code>spring.datasource.url</code>.
+</p>
+<p>
+    The inspection compares property paths extracted from Spring Boot configuration files and warns only when
+    removing one nested segment produces an existing property elsewhere in the project. This helps catch valid
+    YAML that still creates the wrong configuration key and can hide bugs until runtime.
+</p>
+<p>
+    Example:
+</p>
+<pre><code>
+spring:
+  datasource:
+    datasource:
+      url: jdbc:postgresql://localhost/db
+</code></pre>
+<p>
+    This is suspicious because the same project typically defines:
+</p>
+<pre><code>
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost/db
+</code></pre>
+<!-- tooltip end -->
+<p>
+    The warning is intended for real configuration mistakes, not generic YAML formatting issues.
+</p>
+</body>
+</html>

@@ -3,14 +3,12 @@ package com.aleksei.configdoctor.plugin.analysis
 import com.aleksei.configdoctor.plugin.model.ConfigProperty
 
 /**
- * A single suspicious-path finding, per AGENTS.md section 14: "The agent
- * must document WHAT evidence is being used to make this determination."
+ * Represents one concrete suspicious configuration finding.
  *
- * [evidence] is a human-readable explanation, not just an internal flag -
- * it is written so it can be reused verbatim (or near-verbatim) as an
- * inspection message later (section 16 requires the message to explain
- * the actual path, the related expected path, and why the relationship is
- * suspicious).
+ * The `actual` property is the YAML key that looks wrong, while `relatedExpected`
+ * is the nearby property it appears to be structurally related to. The
+ * `evidence` text explains why the relationship is considered suspicious and can
+ * be reused in the inspection message.
  */
 data class SuspiciousPathFinding(
     val actual: ConfigProperty,

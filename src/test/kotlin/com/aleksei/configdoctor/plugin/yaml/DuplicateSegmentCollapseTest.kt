@@ -46,6 +46,24 @@ class DuplicateSegmentCollapseTest : BasePlatformTestCase() {
         assertNull(DuplicateSegmentCollapse.findSafeCollapse(urlKeyValue))
     }
 
+    fun `test finds safe collapse for a shifted wrapper segment`() {
+        val file = configureYaml(
+            """
+            spring:
+              datasource:
+                jdbc:
+                  url: jdbc:postgresql://localhost/db
+            """.trimIndent()
+        )
+
+        val urlKeyValue = findKeyValue(file, "url")
+        val result = DuplicateSegmentCollapse.findSafeCollapse(urlKeyValue)
+
+        assertNotNull(result)
+        assertEquals("datasource", result!!.first.keyText)
+        assertEquals("jdbc", result.second.keyText)
+    }
+
     fun `test returns null when there is no duplicated segment at all`() {
         val file = configureYaml(
             """

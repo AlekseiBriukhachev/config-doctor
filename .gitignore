@@ -40,3 +40,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+/docs/
+
+AGENTS.md
+/.intellijPlatform/

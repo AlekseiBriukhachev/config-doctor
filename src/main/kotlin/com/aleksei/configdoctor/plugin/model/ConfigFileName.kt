@@ -1,14 +1,13 @@
 package com.aleksei.configdoctor.plugin.model
 
 /**
- * Parsed identity of a Spring Boot application configuration file name,
- * e.g. "application-prod.yml" -> baseName="application", profile="prod",
- * extension="yml".
+ * Parsed identity of a Spring Boot application configuration file.
  *
- * AGENTS.md section 13 (Stage 4) explicitly requires the profile to be
- * represented separately from the file name string, rather than code
- * elsewhere re-parsing "application-prod.yml" every time it needs to know
- * the profile. This class is that single parsing point.
+ * Examples include `application.yml`, `application-local.yaml`, and
+ * `application.ONLINE.yml`. The object keeps the base name, optional qualifier
+ * values and the effective profile separately from the file extension so the
+ * analyzer can reason about profile-specific config without string-splitting at
+ * every call site.
  */
 data class ConfigFileName(
     val baseName: String,
@@ -26,17 +25,64 @@ data class ConfigFileName(
         // Only the conventional Spring Boot default base name is
         // recognized. See UNSUPPORTED.md: a custom spring.config.name is
         // not detected.
-        private val PATTERN = Regex("^(application)(?:\\.([A-Za-z0-9]+))?(?:\\.([A-Za-z0-9]+))?(?:-([A-Za-z0-9]+))?\\.(yml|yaml)$")
 
         /**
          * Parses a bare file name (no path) against the naming convention.
-         * Returns null if it doesn't match - e.g. "config.yml",
-         * "application.properties", or "application-local.txt".
+         *
+         * Supported shapes:
+         * - application.yml
+         * - application-local.yml
+         * - application.ONLINE.yml
+         * - application.ONLINE.LOCAL.yml
+         *
+         * The dot-separated qualifiers are treated as a hierarchic override chain,
+         * while the final qualifier becomes the effective profile name for
+         * compatibility with the existing project model.
          */
         fun parse(fileName: String): ConfigFileName? {
-            val match = PATTERN.matchEntire(fileName) ?: return null
-            val (base, step, appType, profile, ext) = match.destructured
-            return ConfigFileName(base, step.ifEmpty { null }, appType.ifEmpty { null }, profile.ifEmpty { null }, ext)
+            val ext = when {
+                fileName.endsWith(".yaml") -> "yaml"
+                fileName.endsWith(".yml") -> "yml"
+                else -> return null
+            }
+
+            val base = "application"
+            val nameWithoutExt = fileName.removeSuffix(".$ext")
+
+            if (nameWithoutExt == base) {
+                return ConfigFileName(base, null, null, null, ext)
+            }
+
+            if (!nameWithoutExt.startsWith(base)) {
+                return null
+            }
+
+            val suffix = nameWithoutExt.removePrefix(base)
+            val qualifiers = when {
+                suffix.startsWith("-") -> {
+                    val profile = suffix.removePrefix("-")
+                    if (profile.isBlank()) return null
+                    listOf(profile)
+                }
+                suffix.startsWith(".") -> {
+                    val profileParts = suffix.removePrefix(".")
+                        .split('.')
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                    if (profileParts.isEmpty()) return null
+                    profileParts
+                }
+                suffix.isEmpty() -> emptyList()
+                else -> return null
+            }
+
+            if (qualifiers.any { it.isBlank() }) return null
+
+            val profile = qualifiers.lastOrNull() ?: return null
+            val step = qualifiers.dropLast(1).lastOrNull()
+            val appType = qualifiers.dropLast(2).lastOrNull()
+
+            return ConfigFileName(base, step?.takeIf { it.isNotBlank() }, appType?.takeIf { it.isNotBlank() }, profile, ext)
         }
     }
 }

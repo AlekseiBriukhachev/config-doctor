@@ -8,13 +8,13 @@ import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.yaml.YAMLFileType
 
 /**
- * Locates Spring Boot application configuration files within a project
- * (AGENTS.md section 13, Stage 4).
+ * Finds YAML files in the project that look like Spring Boot application
+ * configuration files and converts them into `ConfigFile` entries.
  *
- * This only *identifies* files by name using IntelliJ's file type index
- * (fast, incremental, no manual directory walking). It does not attempt
- * to resolve Spring Boot's full configuration model - see UNSUPPORTED.md
- * for what is deliberately not covered yet.
+ * This is intentionally a lightweight discovery step: it matches file names
+ * against the standard `application*.yml` / `application*.yaml` patterns and
+ * relies on IntelliJ's indexed file search instead of manually walking the
+ * project tree.
  */
 object ConfigFileDiscovery {
 

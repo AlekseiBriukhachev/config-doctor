@@ -5,14 +5,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 
 /**
- * Stage 2 skeleton verification hook (AGENTS.md, section 10).
+ * Emits a startup log entry when the plugin loads in an IDE project.
  *
- * This activity performs no configuration analysis whatsoever. Its only
- * purpose is to prove that the plugin loads correctly inside the IDE
- * sandbox with no startup errors. Once Stage 2's Definition of Done is
- * confirmed (sandbox starts, plugin loads, this log line appears), this
- * class can stay as a harmless diagnostic hook or be removed in a later
- * stage.
+ * This is a minimal smoke-check for the IDE sandbox and does not perform any
+ * configuration analysis itself.
  */
 class ConfigDoctorStartupActivity : ProjectActivity {
 

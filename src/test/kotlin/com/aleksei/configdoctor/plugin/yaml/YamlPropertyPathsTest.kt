@@ -7,13 +7,9 @@ import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
 /**
- * Regression tests for YamlPropertyPaths.
- *
- * Covers AGENTS.md section 23 ("REQUIRED REAL-WORLD TESTS") at the
- * extraction level: this does not yet decide whether a path is
- * "suspicious" (that's Stage 5+), it only proves the path extraction
- * itself correctly distinguishes the correct vs. accidentally-nested
- * structures.
+ * Verifies that YAML PSI extraction produces the same dotted paths that Spring
+ * configuration expects, even when a section or key is nested one level too
+ * deep.
  */
 class YamlPropertyPathsTest : BasePlatformTestCase() {
 
@@ -35,9 +31,9 @@ class YamlPropertyPathsTest : BasePlatformTestCase() {
     }
 
     fun `test section shifted one level deeper produces a different path`() {
-        // Simulates AGENTS.md Case 1: a whole section accidentally
-        // indented one level too far, so the expected property is never
-        // created and a different, deeper one exists instead.
+        // Simulates a whole section accidentally indented one level too far,
+        // so the expected property is never created and a different,
+        // deeper one exists instead.
         val file = configureYaml(
             """
             app:
@@ -125,7 +121,7 @@ class YamlPropertyPathsTest : BasePlatformTestCase() {
         )
     }
 
-    // --- False positives (AGENTS.md section 21): valid-but-unusual shapes
+    // --- False positives: valid-but-unusual shapes ---
 
     fun `test custom application properties are extracted without error`() {
         // Not a Spring property at all - just an app-specific value. The
