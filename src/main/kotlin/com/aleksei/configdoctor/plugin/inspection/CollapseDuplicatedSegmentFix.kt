@@ -13,44 +13,13 @@ import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
 
 /**
- * Stage 7 (AGENTS.md section 19): collapses a duplicated adjacent
- * configuration segment. Turns:
+ * Quick fix that removes one redundant nesting level from a duplicated YAML
+ * segment.
  *
- *   spring:
- *     datasource:
- *       datasource:
- *         url: jdbc:...
- *
- * into:
- *
- *   spring:
- *     datasource:
- *       url: jdbc:...
- *
- * Only ever constructed when DuplicateSegmentCollapse.findSafeCollapse
- * found exactly one unambiguous, lossless collapse position - see that
- * class for the safety condition.
- *
- * REVISED implementation note: an earlier version of this class used
- * `PsiElement.replace()` followed by `CodeStyleManager.reformat()` to fix
- * indentation. That approach was found (via an actual failing test run,
- * not review) to trigger an internal assertion failure inside the YAML
- * plugin's own formatter (`YAMLFormattingModelBuilder`:
- * "Mapping should be inlined!") for this exact transformation shape - a
- * limitation of that formatter, not something fixable via configuration.
- *
- * This version instead builds the fully-indented replacement text itself
- * (using real, absolute column offsets read from the document - YAML block
- * indentation is literal source text, not something IntelliJ recomputes
- * automatically when PSI nodes are spliced) and parses it into valid PSI
- * via `YAMLElementGenerator.createDummyYamlWithText`, then replaces the
- * outer node wholesale. No reformat() call is needed or made. This mirrors
- * the pattern used in JetBrains' own YAML PSI mutation code
- * (YAMLBlockMappingImpl) and in publicly documented third-party examples.
- *
- * Uses SmartPsiElementPointer rather than holding the YAMLKeyValue
- * references directly, since a Quick Fix can be applied after the
- * document has changed since the inspection ran.
+ * The fix reconstructs the YAML fragment with the correct indentation and
+ * replaces the outer key/value node with the collapsed version. It only runs
+ * after the code has re-validated that the duplication is still structurally
+ * safe to collapse.
  */
 class CollapseDuplicatedSegmentFix(
     outerKeyValue: YAMLKeyValue,

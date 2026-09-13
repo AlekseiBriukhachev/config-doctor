@@ -3,9 +3,8 @@ package com.aleksei.configdoctor.plugin.inspection
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
- * Separate test class from Stage 6's SuspiciousConfigPathInspectionTest
- * (kept untouched) - this one specifically exercises the Stage 7 Quick
- * Fix end-to-end through the real inspection + intention machinery.
+ * Verifies that the quick fixes proposed by the inspection actually rewrite the
+ * YAML into the expected, non-duplicated structure.
  */
 class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
 
@@ -73,6 +72,34 @@ class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
             spring:
               datasource:
                 url: jdbc:postgresql://localhost/local-db
+            """.trimIndent(),
+            myFixture.file.text.trim()
+        )
+    }
+
+    fun `test applying the profile override fix renames the mismatched leaf key`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.configureByText(
+            "application-local.yml",
+            """
+            server:
+              <caret>ports: 8081
+            """.trimIndent()
+        )
+
+        val intention = myFixture.findSingleIntention("Replace 'ports' with 'port'")
+        myFixture.launchAction(intention)
+
+        assertEquals(
+            """
+            server:
+              port: 8081
             """.trimIndent(),
             myFixture.file.text.trim()
         )

@@ -4,30 +4,13 @@ import com.aleksei.configdoctor.plugin.model.ConfigProperty
 import com.aleksei.configdoctor.plugin.model.PropertyPath
 
 /**
- * Stage 5 (AGENTS.md section 14): a detection prototype proving that a
- * structurally shifted YAML path can be identified from project-local evidence
- * before any IntelliJ inspection framework is involved. There is no
- * LocalInspectionTool here, no plugin.xml wiring, no UI - just a pure function
- * over already-extracted properties (Stage 3 + Stage 4), with automated tests.
+ * Looks for YAML paths that clearly have one extra nesting level or a repeated
+ * segment compared to an existing property elsewhere in the project.
  *
- * ## What this detects
- *
- * A property path that collapses to a real, currently-used property elsewhere in
- * the project when one nested segment is removed. This covers both the original
- * duplicate-adjacent case (e.g. "spring.datasource.datasource.url" ->
- * "spring.datasource.url") and the shifted-wrapper case (e.g.
- * "spring.application.name" -> "spring.name").
- *
- * This is evidence tier 2 from AGENTS.md section 15 ("Strong relationship with
- * another configuration property in the same project"): the "expected" path is
- * not invented or guessed - it must exist in the project, found via a
- * deterministic transformation rather than vague textual similarity.
- *
- * ## What this deliberately does NOT detect
- *
- * A path with no matching real project property after removing a single segment
- * is not flagged: there is no concrete expected path to compare against, so no
- * warning is reported rather than guessing.
+ * The detector does not guess: it only raises a finding when removing one path
+ * segment produces a property that is already present in the project. That
+ * makes it useful for the real-world cases where a section or key was shifted
+ * one level deeper than intended.
  */
 object SuspiciousPathDetector {
 

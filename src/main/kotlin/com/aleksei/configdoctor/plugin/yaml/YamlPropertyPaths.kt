@@ -10,34 +10,17 @@ import org.jetbrains.yaml.psi.YAMLMapping
 import org.jetbrains.yaml.psi.YAMLValue
 
 /**
- * Converts YAML PSI structure into Spring Boot-style dotted property paths.
+ * Builds dotted property paths from IntelliJ YAML PSI objects.
  *
- * AGENTS.md, section 11 (Stage 3), requires this to use IntelliJ's PSI/YAML
- * API rather than parsing raw text or indentation. This class does exactly
- * that: it only ever reads YAMLKeyValue.keyText and walks PSI parent links
- * (YAMLKeyValue -> YAMLMapping -> YAMLKeyValue -> ...). It never inspects
- * whitespace, column offsets, or the document's raw text.
- *
- * Scope note (see AGENTS.md section 6, OUT OF SCOPE): YAML sequences
- * (lists) are not expanded into indexed paths here. A key whose value is a
- * YAMLSequence is currently treated as a leaf and its path is reported,
- * but the list's contents are not walked. Spring Boot's list-binding rules
- * are more involved than this MVP needs to model yet.
+ * Instead of reading indentation or raw text, it walks the actual YAML key
+ * hierarchy using `YAMLKeyValue` and `YAMLMapping` parent links. This makes the
+ * extracted path match the real structure the IDE is representing.
  */
 object YamlPropertyPaths {
 
     /**
-     * Builds the full property path for a single YAMLKeyValue by walking up
-     * through its enclosing YAMLMapping/YAMLKeyValue ancestors.
-     *
-     * Example - given:
-     * ```
-     * spring:
-     *   datasource:
-     *     url: jdbc:postgresql://localhost/db
-     * ```
-     * calling this on the "url" YAMLKeyValue returns the path
-     * "spring.datasource.url".
+     * Returns the full dotted path for a single YAML key, including all
+     * enclosing mapping keys.
      */
     fun pathOf(keyValue: YAMLKeyValue): PropertyPath {
         val segments = ArrayList<String>()
@@ -51,11 +34,9 @@ object YamlPropertyPaths {
     }
 
     /**
-     * The full ancestor chain of [keyValue], ordered from the outermost
-     * enclosing key down to [keyValue] itself - the same order as the
-     * segments returned by pathOf(keyValue). Used by Stage 7's Quick Fix
-     * to locate exactly which ancestor PSI element corresponds to which
-     * path segment.
+     * Returns the ancestor chain from the outermost mapping key to this key.
+     * This is useful when a quick fix needs to locate the exact PSI node that
+     * corresponds to a particular path segment.
      */
     fun ancestorChainOf(keyValue: YAMLKeyValue): List<YAMLKeyValue> {
         val chain = ArrayList<YAMLKeyValue>()
@@ -69,23 +50,19 @@ object YamlPropertyPaths {
     }
 
     /**
-     * Walks an entire YAML file and returns the property path for every
-     * "leaf" key: a key whose value is a scalar, a sequence, or missing/
-     * empty. Keys whose value is itself a mapping are internal nodes and
-     * are not returned individually - only their leaves are, since those
-     * are the actual configuration properties Spring Boot binds to.
+     * Collects the dotted path for every leaf property in a YAML file.
      *
-     * A YAML file may contain multiple documents (separated by `---`);
-     * all of them are walked.
+     * A leaf is a key whose value is a scalar, an empty value, or a list; keys
+     * containing nested mappings are treated as parent sections instead of being
+     * reported as standalone properties.
      */
     fun leafPathsOf(file: YAMLFile): List<PropertyPath> =
         leafKeyValuesOf(file).map { pathOf(it) }
 
     /**
-     * Same traversal as leafPathsOf, but returns the underlying
-     * YAMLKeyValue elements themselves - needed to build ConfigProperty
-     * (Stage 5), which requires the PSI element and the raw value text,
-     * not just the path.
+     * Returns the YAML key/value PSI nodes for each leaf property in the file.
+     * Callers can use this to access the original PSI element and the raw value
+     * text while also building a logical property path.
      */
     fun leafKeyValuesOf(file: YAMLFile): List<YAMLKeyValue> {
         val result = ArrayList<YAMLKeyValue>()
@@ -106,15 +83,13 @@ object YamlPropertyPaths {
     }
 
     /**
-     * The nearest enclosing YAMLKeyValue one level up in the YAML
-     * hierarchy - i.e. this key's parent key. Returns null once we reach
-     * the document root (no more enclosing key).
+     * Finds the nearest parent YAML key above this key within the same mapping
+     * structure. Returns null once the document root is reached.
      */
     private fun YAMLKeyValue.enclosingKeyValue(): YAMLKeyValue? {
         var candidate = this.parent
         while (candidate != null) {
             if (candidate is YAMLKeyValue) return candidate
-            // Stop climbing once we leave the mapping structure entirely.
             if (candidate is YAMLDocument) return null
             candidate = candidate.parent
         }
@@ -122,9 +97,8 @@ object YamlPropertyPaths {
     }
 
     /**
-     * Builds a ConfigProperty (Stage 5 / AGENTS.md section 12) for every
-     * leaf key in [yamlFile], attributing it to [configFile] (for
-     * sourceFile/profile).
+     * Converts every leaf YAML key in a file into a `ConfigProperty` with the
+     * source file, profile and PSI element attached.
      */
     fun leafConfigPropertiesOf(
         configFile: ConfigFile,

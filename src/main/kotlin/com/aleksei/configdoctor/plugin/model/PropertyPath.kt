@@ -1,13 +1,11 @@
 package com.aleksei.configdoctor.plugin.model
 
 /**
- * A Spring Boot style dotted configuration property path, e.g.
- * "spring.datasource.url".
+ * Represents a dotted Spring-style configuration key, such as
+ * `spring.datasource.url`.
  *
- * Kept deliberately minimal per AGENTS.md section 12 ("Do not create a
- * large domain model prematurely"): this is Stage 3 material only - the
- * fuller ConfigProperty model (value, source file, PSI element, profile)
- * comes later, in Stage 4.
+ * The model is intentionally small: it stores only the path segments and
+ * helper methods used to compare one property path with another.
  */
 data class PropertyPath(val segments: List<String>) {
 

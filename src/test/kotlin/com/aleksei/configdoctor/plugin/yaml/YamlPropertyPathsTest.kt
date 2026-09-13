@@ -7,13 +7,9 @@ import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
 /**
- * Regression tests for YamlPropertyPaths.
- *
- * Covers AGENTS.md section 23 ("REQUIRED REAL-WORLD TESTS") at the
- * extraction level: this does not yet decide whether a path is
- * "suspicious" (that's Stage 5+), it only proves the path extraction
- * itself correctly distinguishes the correct vs. accidentally-nested
- * structures.
+ * Verifies that YAML PSI extraction produces the same dotted paths that Spring
+ * configuration expects, even when a section or key is nested one level too
+ * deep.
  */
 class YamlPropertyPathsTest : BasePlatformTestCase() {
 

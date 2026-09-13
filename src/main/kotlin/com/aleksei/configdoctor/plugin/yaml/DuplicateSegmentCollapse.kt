@@ -5,35 +5,22 @@ import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
 
 /**
- * Stage 7 (AGENTS.md section 19): decides whether a suspicious path can be
- * safely and unambiguously collapsed by a Quick Fix.
+ * Decides whether a suspicious YAML key can be fixed by removing one redundant
+ * nesting layer.
  *
- * The same safety rule is used for both duplicate-segment and shifted-segment
- * mistakes: only a single wrapper layer is considered safe to collapse if the
- * outer key's mapping contains exactly one child. If the ancestor chain has no
- * such position, or more than one candidate position, this returns null and no
- * fix should be offered.
- */
-/**
- * Stage 7 (AGENTS.md section 19): decides whether a suspicious path can be
- * safely and unambiguously collapsed by a Quick Fix.
- *
- * The same safety rule is used for both duplicate-segment and shifted-segment
- * mistakes: only a single wrapper layer is considered safe to collapse if the
- * outer key's mapping contains exactly one child. If the ancestor chain has no
- * such position, or more than one candidate position, this returns null and no
- * fix should be offered.
+ * The fix is only offered when there is exactly one unambiguous wrapper node
+ * in the ancestor chain. If the parent mapping has siblings or there are
+ * multiple collapse candidates, the method returns null and the inspection does
+ * not suggest a rewrite.
  */
 object DuplicateSegmentCollapse {
 
     /**
-     * Given the leaf key value that was flagged as suspicious, walks its
-     * ancestor chain (root to leaf) looking for a safely collapsible nesting
-     * layer.
+     * Walks the ancestor chain of a flagged key and returns the single safe
+     * collapse point, if any.
      *
-     * Returns (outerKeyValue, innerKeyValue): collapsing means replacing
-     * outerKeyValue's mapping value with innerKeyValue's value, removing the
-     * redundant nesting level entirely.
+     * The returned pair is `(outerKeyValue, innerKeyValue)`: the outer mapping
+     * is the redundant wrapper that can be replaced by the inner value.
      */
     fun findSafeCollapse(leaf: YAMLKeyValue): Pair<YAMLKeyValue, YAMLKeyValue>? {
         val chain = YamlPropertyPaths.ancestorChainOf(leaf)

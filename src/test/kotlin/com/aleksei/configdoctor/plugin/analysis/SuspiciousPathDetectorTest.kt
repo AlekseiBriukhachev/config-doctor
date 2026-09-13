@@ -8,12 +8,11 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jetbrains.yaml.psi.YAMLFile
 
 /**
- * AGENTS.md section 14 (Stage 5): "Create a test case based on the real
- * datasource example." This test builds ConfigProperty the same way real
- * usage would - by running Stage 4 discovery, then Stage 3 extraction,
- * then handing the result to the Stage 5 detector - rather than
- * constructing ConfigProperty by hand, so the whole pipeline is actually
- * exercised together.
+ * Exercises the full property-discovery pipeline for the real-world datasource
+ * mis-nesting case.
+ *
+ * The test collects YAML files from the project, extracts nested property paths,
+ * and confirms that the detector finds only the intentionally broken property.
  */
 class SuspiciousPathDetectorTest : BasePlatformTestCase() {
 

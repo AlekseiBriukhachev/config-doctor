@@ -19,39 +19,12 @@ import org.jetbrains.yaml.psi.YAMLMapping
 import com.aleksei.configdoctor.plugin.yaml.DuplicateSegmentCollapse
 
 /**
- * Stage 6 (AGENTS.md section 17): the first real IntelliJ inspection.
- * Wires together Stage 3 (property-path extraction), Stage 4
- * (configuration file discovery) and Stage 5 (the duplicated-segment
- * detector) so problems are actually highlighted in the editor.
+ * Highlights YAML keys that look like an accidental extra nesting level or a
+ * duplicated path segment.
  *
- * API note (section 17 requires verifying the exact API for the target
- * platform version): `LocalInspectionTool.buildVisitor(ProblemsHolder,
- * Boolean): PsiElementVisitor` was confirmed against the current
- * JetBrains/intellij-community source for the 2023.2-2024.2 range - the
- * signature has not changed there. This visitor deliberately checks
- * `element is YAMLKeyValue` on a plain PsiElementVisitor rather than
- * extending a YAML-specific visitor base class, since that class's exact
- * name/package was not independently re-verified - a generic
- * PsiElementVisitor is guaranteed to exist regardless of platform
- * version or YAML plugin internals.
- *
- * Follows the 5-step process from section 17 explicitly:
- *   1. inspect the relevant YAML PSI       -> visitElement / is YAMLKeyValue
- *   2. identify the property               -> YamlPropertyPaths.pathOf
- *   3. obtain evidence                     -> SuspiciousPathDetector
- *   4. decide whether it's suspicious      -> match against detector findings
- *   5. register a problem only when confident -> only on an actual finding
- *
- * Severity note (section 18): registers at WARNING, never ERROR - the
- * YAML here is syntactically valid, we are only flagging a suspected
- * accidental structural deviation.
- *
- * Known limitation (not addressed at this stage): findings are
- * recomputed by re-scanning the whole project once per file visited,
- * rather than being cached/shared across a single analysis pass. This is
- * a correctness-first prototype (section 16: "prove the core problem is
- * detectable"); performance tuning belongs to a later regression/
- * real-project-validation stage.
+ * The inspection gathers all Spring configuration properties in the project,
+ * compares their paths with a lightweight suspicious-path detector, and warns
+ * only when there is a concrete match that explains the problem.
  */
 class SuspiciousConfigPathInspection : LocalInspectionTool() {
 
@@ -70,10 +43,18 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
 
                 val finding = findings.firstOrNull { it.actual.psiElement == keyValue } ?: return
 
-                // Section 19: only offer the fix when a single, unambiguous, lossless
-                // collapse position was found - independent from "is it suspicious".
-                val fix = DuplicateSegmentCollapse.findSafeCollapse(keyValue)?.let { (outer, duplicate) ->
-                    CollapseDuplicatedSegmentFix(outer, duplicate)
+                val fix = when (finding.evidenceKind) {
+                    EvidenceKind.PROFILE_OVERRIDE_RELATIONSHIP -> {
+                        val expectedLeaf = finding.relatedExpected.path.segments.lastOrNull()
+                        if (expectedLeaf != null && expectedLeaf != keyValue.keyText) {
+                            ReplaceProfileMismatchKeyFix(keyValue, expectedLeaf)
+                        } else {
+                            null
+                        }
+                    }
+                    else -> DuplicateSegmentCollapse.findSafeCollapse(keyValue)?.let { (outer, duplicate) ->
+                        CollapseDuplicatedSegmentFix(outer, duplicate)
+                    }
                 }
 
                 holder.registerProblem(
@@ -87,9 +68,8 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
     }
 
     /**
-     * AGENTS.md section 16: the message must explain the actual path, the
-     * related expected path, and WHY the relationship is suspicious - not
-     * a vague "Invalid YAML." (the YAML here is perfectly valid).
+     * Builds a warning message that names both the suspicious path and the known
+     * property it appears to correspond to.
      */
     private fun buildMessage(finding: SuspiciousPathFinding): String {
         return when (finding.evidenceKind) {

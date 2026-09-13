@@ -1,14 +1,13 @@
 package com.aleksei.configdoctor.plugin.model
 
 /**
- * Parsed identity of a Spring Boot application configuration file name,
- * e.g. "application-prod.yml" -> baseName="application", profile="prod",
- * extension="yml".
+ * Parsed identity of a Spring Boot application configuration file.
  *
- * AGENTS.md section 13 (Stage 4) explicitly requires the profile to be
- * represented separately from the file name string, rather than code
- * elsewhere re-parsing "application-prod.yml" every time it needs to know
- * the profile. This class is that single parsing point.
+ * Examples include `application.yml`, `application-local.yaml`, and
+ * `application.ONLINE.yml`. The object keeps the base name, optional qualifier
+ * values and the effective profile separately from the file extension so the
+ * analyzer can reason about profile-specific config without string-splitting at
+ * every call site.
  */
 data class ConfigFileName(
     val baseName: String,

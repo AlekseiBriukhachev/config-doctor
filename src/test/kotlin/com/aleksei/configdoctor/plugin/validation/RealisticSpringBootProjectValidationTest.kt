@@ -5,28 +5,11 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
- * Stage 9 (AGENTS.md section 25, "Real project validation").
+ * Validates the inspection against a realistic mixed Spring Boot-style project.
  *
- * AGENTS.md asks for the plugin to be exercised "against a real Spring Boot
- * project" (application.yml / application-local.yml / application-test.yml,
- * nested configuration, datasource configuration, custom application
- * properties) and for detected problems / false positives / crashes to be
- * recorded.
- *
- * IMPORTANT HONESTY NOTE: this test is NOT a substitute for actually running
- * `./gradlew runIde` against a real, independent Spring Boot repository in a
- * live sandbox IDE - that manual step could not be completed in the
- * environment this was developed in (dependency downloads are blocked/
- * throttled by a corporate proxy that prevents even compiling the plugin -
- * see the environment's build troubleshooting notes). This test is the
- * closest honest automated approximation: a single project containing a
- * realistic MIX of files and property shapes (multiple profiles, custom
- * non-Spring properties, lists, nested nulls, a legitimate cross-profile
- * override, AND both of the two required real-world mistake shapes),
- * asserting that exactly the intended finding is produced and nothing else
- * is. Running the plugin in a live sandbox against a real external project
- * (per section 25's checklist) is still recommended before shipping and is
- * tracked in docs/STAGE9_VALIDATION.md.
+ * The fixture includes base, profile-specific, custom application settings, and
+ * one intentional mis-nested datasource value. The test asserts that only the
+ * real problem is reported and that valid files remain clean.
  */
 class RealisticSpringBootProjectValidationTest : BasePlatformTestCase() {
 
