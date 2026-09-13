@@ -31,6 +31,17 @@ class ConfigFileNameTest {
     }
 
     @Test
+    fun `dot-separated override chains are recognized`() {
+        val online = ConfigFileName.parse("application.ONLINE.yml")
+        assertEquals("ONLINE", online?.profile)
+        assertEquals("application", online?.baseName)
+
+        val localOverride = ConfigFileName.parse("application.ONLINE.LOCAL.yml")
+        assertEquals("LOCAL", localOverride?.profile)
+        assertEquals("ONLINE", localOverride?.step)
+    }
+
+    @Test
     fun `unrelated or malformed file names are rejected`() {
         assertNull(ConfigFileName.parse("config.yml"))
         assertNull(ConfigFileName.parse("application.properties"))
