@@ -15,6 +15,7 @@ import com.intellij.psi.PsiManager
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
+import com.aleksei.configdoctor.plugin.yaml.DuplicateSegmentCollapse
 
 /**
  * Stage 6 (AGENTS.md section 17): the first real IntelliJ inspection.
@@ -56,7 +57,7 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         val project = holder.project
         val findings: List<SuspiciousPathFinding> by lazy {
-            SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllConfigProperties(project))
+            SuspiciousPathDetector.findSuspiciousPaths(collectAllConfigProperties(project))
         }
 
         return object : PsiElementVisitor() {
@@ -68,10 +69,17 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
 
                 val finding = findings.firstOrNull { it.actual.psiElement == keyValue } ?: return
 
+                // Section 19: only offer the fix when a single, unambiguous, lossless
+                // collapse position was found - independent from "is it suspicious".
+                val fix = DuplicateSegmentCollapse.findSafeCollapse(keyValue)?.let { (outer, duplicate) ->
+                    CollapseDuplicatedSegmentFix(outer, duplicate)
+                }
+
                 holder.registerProblem(
                     keyValue,
                     buildMessage(finding),
-                    ProblemHighlightType.WARNING
+                    ProblemHighlightType.WARNING,
+                    *listOfNotNull(fix).toTypedArray()
                 )
             }
         }
@@ -84,7 +92,7 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
      */
     private fun buildMessage(finding: SuspiciousPathFinding): String {
         return "Suspicious configuration path '${finding.actual.path}'. " +
-            "It may be an accidental duplication of the existing property " +
+            "It may be an accidental misplacement or duplication of the existing property " +
             "'${finding.relatedExpected.path}'. ${finding.evidence}"
     }
 

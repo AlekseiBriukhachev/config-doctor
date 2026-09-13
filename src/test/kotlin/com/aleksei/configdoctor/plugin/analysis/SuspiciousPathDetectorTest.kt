@@ -89,27 +89,66 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
         assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
     }
 
-    fun `test a shifted (non-duplicate) section is intentionally not flagged - documented scope limit`() {
-        // Same shape as the "misplaced section" regression case from
-        // Stage 3 - an inserted, non-duplicate segment. This detector
-        // only targets adjacent duplicate segments (evidence tier 2), not
-        // general structural similarity (tier 4), so this must NOT be
-        // flagged yet.
+    fun `test a shifted (non-duplicate) section is flagged when the collapsed path already exists`() {
         myFixture.addFileToProject(
             "src/main/resources/application.yml",
             """
-            app:
-              feature:
-                enabled: true
+            spring:
+              name: demo-app
             """.trimIndent()
         )
         myFixture.addFileToProject(
             "src/main/resources/application-local.yml",
             """
+            spring:
+              application:
+                name: demo-app
+            """.trimIndent()
+        )
+
+        val findings = SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties())
+        assertEquals(1, findings.size)
+        assertEquals("spring.application.name", findings.single().actual.path.toString())
+        assertEquals("spring.name", findings.single().relatedExpected.path.toString())
+    }
+
+    fun `test a property existing only in a profile file is not itself an error - AGENTS section 20`() {
+        // AGENTS.md section 20 explicitly forbids the rule "if a profile
+        // property is absent from the base file, show a warning" - a
+        // profile-only property (with no duplicated segment at all) must
+        // never be flagged, regardless of whether a same-named property
+        // exists in the base file.
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/application-local.yml",
+            """
+            server:
+              port: 8080
+            debug:
+              verbose-logging: true
+            """.trimIndent()
+        )
+
+        assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
+    }
+
+    fun `test a duplicated segment that is itself the intended property shape is not flagged`() {
+        // A property that legitimately contains a repeated word as a
+        // deliberate, single, real property (not two nested keys with the
+        // same name) must not be affected - the detector only ever looks at
+        // adjacent YAML *key* segments, never substrings of a single key.
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
             app:
-              wrapper:
-                feature:
-                  enabled: true
+              retry-retry-policy:
+                max-attempts: 3
             """.trimIndent()
         )
 

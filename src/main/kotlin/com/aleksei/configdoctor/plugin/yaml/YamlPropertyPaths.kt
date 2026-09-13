@@ -1,5 +1,7 @@
 package com.aleksei.configdoctor.plugin.yaml
 
+import com.aleksei.configdoctor.plugin.model.ConfigFile
+import com.aleksei.configdoctor.plugin.model.ConfigProperty
 import com.aleksei.configdoctor.plugin.model.PropertyPath
 import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLFile
@@ -46,6 +48,24 @@ object YamlPropertyPaths {
         }
         segments.reverse()
         return PropertyPath(segments)
+    }
+
+    /**
+     * The full ancestor chain of [keyValue], ordered from the outermost
+     * enclosing key down to [keyValue] itself - the same order as the
+     * segments returned by pathOf(keyValue). Used by Stage 7's Quick Fix
+     * to locate exactly which ancestor PSI element corresponds to which
+     * path segment.
+     */
+    fun ancestorChainOf(keyValue: YAMLKeyValue): List<YAMLKeyValue> {
+        val chain = ArrayList<YAMLKeyValue>()
+        var current: YAMLKeyValue? = keyValue
+        while (current != null) {
+            chain.add(current)
+            current = current.enclosingKeyValue()
+        }
+        chain.reverse()
+        return chain
     }
 
     /**
@@ -107,11 +127,11 @@ object YamlPropertyPaths {
      * sourceFile/profile).
      */
     fun leafConfigPropertiesOf(
-        configFile: com.aleksei.configdoctor.plugin.model.ConfigFile,
+        configFile: ConfigFile,
         yamlFile: YAMLFile
-    ): List<com.aleksei.configdoctor.plugin.model.ConfigProperty> =
+    ): List<ConfigProperty> =
         leafKeyValuesOf(yamlFile).map { keyValue ->
-            com.aleksei.configdoctor.plugin.model.ConfigProperty(
+            ConfigProperty(
                 path = pathOf(keyValue),
                 value = keyValue.valueText.ifEmpty { null },
                 sourceFile = configFile.virtualFile,

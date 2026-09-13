@@ -9,9 +9,15 @@
         such as spring.datasource.datasource.url instead of
         spring.datasource.url) before the application is started.
         <br/><br/>
-        This build is a Stage 2 project skeleton per AGENTS.md: no
-        inspection or analysis logic is implemented yet. Its only purpose
-        is to prove the plugin loads cleanly in the IDE sandbox.
+        It flags the duplicated path with a WARNING-level inspection that
+        explains the actual path, the related expected path (an actual,
+        currently-used property found elsewhere in the project), and why
+        the relationship is suspicious, and offers a Quick Fix to safely
+        collapse the duplicated segment when doing so is unambiguous.
+        <br/><br/>
+        See the project README and CLAUDE.md for full scope and
+        limitations - this is a focused, deterministic static-analysis
+        tool, not a generic YAML linter or an AI assistant.
     ]]></description>
 
     <!-- Config Doctor's core job is analyzing YAML PSI, so it depends on
