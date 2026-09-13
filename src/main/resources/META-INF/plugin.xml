@@ -1,27 +1,28 @@
 <idea-plugin>
-    <id>com.aleksei.config-doctor</id>
+    <id>com.aleksei.configdoctor</id>
     <name>Config Doctor</name>
-    <vendor url="https://github.com/AlekseiBriukhachev/config-doctor" email="aleksei.develop@gmail.com">AleksDev</vendor>
+    <vendor url="https://github.com/AlekseiBriukhachev/config-doctor" email="aleksei.develop@gmail.com">Aleksei Briukhachev</vendor>
 
     <description><![CDATA[
-        Config Doctor detects suspicious Spring Boot YAML configuration
-        structures (for example, an accidentally duplicated nesting level,
-        such as spring.datasource.datasource.url instead of
-        spring.datasource.url) before the application is started.
+        Config Doctor warns about suspicious Spring Boot YAML property paths before the application starts.
         <br/><br/>
-        It flags the duplicated path with a WARNING-level inspection that
-        explains the actual path, the related expected path (an actual,
-        currently-used property found elsewhere in the project), and why
-        the relationship is suspicious, and offers a Quick Fix to safely
-        collapse the duplicated segment when doing so is unambiguous.
+        It inspects `application*.yml` and `application*.yaml` files, extracts YAML property paths through IntelliJ PSI,
+        and highlights cases where a key or section looks like it was accidentally nested one level too deep.
         <br/><br/>
-        See the project README and CLAUDE.md for full scope and
-        limitations - this is a focused, deterministic static-analysis
-        tool, not a generic YAML linter or an AI assistant.
+        Typical example: `spring.datasource.datasource.url` is flagged when the project already contains
+        `spring.datasource.url`, because the YAML is valid but the effective property path is wrong.
+        <br/><br/>
+        The inspection reports a warning with the actual path, the related property it matches, and why the structure
+        looks suspicious. It offers a quick fix only when collapsing the redundant nesting is safe and unambiguous.
+        <br/><br/>
+        This is a focused static-analysis tool for Spring Boot configuration mistakes, not a generic YAML linter or AI-based fixer.
     ]]></description>
 
-    <!-- Config Doctor's core job is analyzing YAML PSI, so it depends on
-         the bundled YAML plugin. -->
+    <change-notes><![CDATA[
+        Initial version with YAML PSI path extraction, suspicious property detection, warning inspection,
+        and safe quick fixes for duplicated or shifted configuration segments.
+    ]]></change-notes>
+
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
 
