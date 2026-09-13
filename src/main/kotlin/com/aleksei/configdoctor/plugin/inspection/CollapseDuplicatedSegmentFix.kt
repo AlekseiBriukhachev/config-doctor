@@ -3,10 +3,9 @@ package com.aleksei.configdoctor.plugin.inspection
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.openapi.project.Project
+import com.aleksei.configdoctor.plugin.yaml.DuplicateSegmentCollapse
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
-import com.intellij.psi.SmartPointerManager
-import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -21,44 +20,27 @@ import org.jetbrains.yaml.psi.YAMLMapping
  * after the code has re-validated that the duplication is still structurally
  * safe to collapse.
  */
-class CollapseDuplicatedSegmentFix(
-    outerKeyValue: YAMLKeyValue,
-    duplicateKeyValue: YAMLKeyValue
-) : LocalQuickFix {
-
-    private val outerPointer: SmartPsiElementPointer<YAMLKeyValue> =
-        SmartPointerManager.createPointer(outerKeyValue)
-    private val duplicatePointer: SmartPsiElementPointer<YAMLKeyValue> =
-        SmartPointerManager.createPointer(duplicateKeyValue)
+class CollapseDuplicatedSegmentFix : LocalQuickFix {
 
     override fun getFamilyName(): String = "Collapse duplicated configuration segment"
 
     override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
-        val outer = outerPointer.element ?: return
-        val duplicate = duplicatePointer.element ?: return
+        val keyValue = descriptor.psiElement as? YAMLKeyValue ?: return
+        val collapse = DuplicateSegmentCollapse.findSafeCollapse(keyValue) ?: return
+        val outer = collapse.first
+        val duplicate = collapse.second
 
         // Re-validate at apply time: the file may have changed since the
-        // inspection last ran. Section 19 requires this to stay safe and
-        // deterministic - never assume stale analysis state is still valid.
+        // inspection last ran. This keeps the fix safe and deterministic.
         val outerMapping = outer.value as? YAMLMapping ?: return
         if (outerMapping.keyValues.singleOrNull() != duplicate) return
 
         val duplicateValue = duplicate.value ?: return
 
-        // How many columns one indent level is in THIS file, measured from
-        // the actual two real key lines - not assumed to be 2 or 4 spaces.
         val outerColumn = columnOf(outer)
         val unitIndent = columnOf(duplicate) - outerColumn
-        if (unitIndent <= 0) return // can't determine a safe single indent unit - refuse rather than guess
+        if (unitIndent <= 0) return
 
-        // duplicateValue.text's own first line never includes its leading
-        // indentation (that whitespace belongs to the "duplicate:" key
-        // line that precedes it, i.e. it is outside duplicateValue's own
-        // PSI range) - it must be added back explicitly, using the real
-        // absolute column this content needs once promoted one level
-        // above outer. Every subsequent line DOES already carry its own
-        // real absolute indentation as literal text, so those only need
-        // to be dedented by exactly one indent unit.
         val valueLines = duplicateValue.text.lines()
         val newValueLines = valueLines.mapIndexed { index, line ->
             when {

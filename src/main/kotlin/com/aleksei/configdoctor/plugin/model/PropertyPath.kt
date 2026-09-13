@@ -15,12 +15,6 @@ data class PropertyPath(val segments: List<String>) {
 
     override fun toString(): String = segments.joinToString(".")
 
-    /** True if this path is exactly [other] or a parent of it. */
-    fun isPrefixOf(other: PropertyPath): Boolean {
-        if (segments.size > other.segments.size) return false
-        return segments == other.segments.subList(0, segments.size)
-    }
-
     companion object {
         fun of(vararg segments: String): PropertyPath = PropertyPath(segments.toList())
     }

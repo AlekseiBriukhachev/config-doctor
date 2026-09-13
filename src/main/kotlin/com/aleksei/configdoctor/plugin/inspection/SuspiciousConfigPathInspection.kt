@@ -37,8 +37,8 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
         return object : PsiElementVisitor() {
             override fun visitElement(element: PsiElement) {
                 val keyValue = element as? YAMLKeyValue ?: return
-                // Only leaf keys are properties (same notion as Stage 3);
-                // a section key's value is itself a mapping.
+                // Only leaf keys are treated as properties; a section key's
+                // value is itself a mapping and is not a standalone config item.
                 if (keyValue.value is YAMLMapping) return
 
                 val finding = findings.firstOrNull { it.actual.psiElement == keyValue } ?: return
@@ -52,8 +52,10 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
                             null
                         }
                     }
-                    else -> DuplicateSegmentCollapse.findSafeCollapse(keyValue)?.let { (outer, duplicate) ->
-                        CollapseDuplicatedSegmentFix(outer, duplicate)
+                    else -> if (DuplicateSegmentCollapse.findSafeCollapse(keyValue) != null) {
+                        CollapseDuplicatedSegmentFix()
+                    } else {
+                        null
                     }
                 }
 
