@@ -19,5 +19,11 @@ enum class EvidenceKind {
      * project was found that the candidate path is structurally derived
      * from via a deterministic transformation (not mere text similarity).
      */
-    STRONG_PROJECT_RELATIONSHIP
+    STRONG_PROJECT_RELATIONSHIP,
+
+    /**
+     * Tier 3: the profile property is a different path from the base
+     * property it appears to resemble, so it does not actually override it.
+     */
+    PROFILE_OVERRIDE_RELATIONSHIP
 }

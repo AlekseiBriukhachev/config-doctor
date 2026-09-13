@@ -73,6 +73,26 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
         assertTrue(SuspiciousPathDetector.findSuspiciousDuplicatedSegments(collectAllProperties()).isEmpty())
     }
 
+    fun `test a profile override mismatch with the same parent path but a different leaf is flagged`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            server:
+              port: 8080
+            """.trimIndent()
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/application-local.yml",
+            """
+            server:
+              ports: 8081
+            """.trimIndent()
+        )
+
+        val findings = SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties())
+        assertTrue(findings.any { it.actual.path.toString() == "server.ports" && it.relatedExpected.path.toString() == "server.port" })
+    }
+
     fun `test duplicated segment with no matching real property is not flagged`() {
         // A path with an adjacent duplicate exists, but nothing in the
         // project matches the collapsed form - must not invent a finding.

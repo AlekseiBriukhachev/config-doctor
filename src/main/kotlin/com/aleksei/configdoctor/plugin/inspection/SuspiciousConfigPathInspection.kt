@@ -1,5 +1,6 @@
 package com.aleksei.configdoctor.plugin.inspection
 
+import com.aleksei.configdoctor.plugin.analysis.EvidenceKind
 import com.aleksei.configdoctor.plugin.analysis.SuspiciousPathDetector
 import com.aleksei.configdoctor.plugin.analysis.SuspiciousPathFinding
 import com.aleksei.configdoctor.plugin.model.ConfigProperty
@@ -91,9 +92,16 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
      * a vague "Invalid YAML." (the YAML here is perfectly valid).
      */
     private fun buildMessage(finding: SuspiciousPathFinding): String {
-        return "Suspicious configuration path '${finding.actual.path}'. " +
-            "It may be an accidental misplacement or duplication of the existing property " +
-            "'${finding.relatedExpected.path}'. ${finding.evidence}"
+        return when (finding.evidenceKind) {
+            EvidenceKind.PROFILE_OVERRIDE_RELATIONSHIP ->
+                "This property does not override '${finding.relatedExpected.path}'. " +
+                    "The profile value '${finding.actual.path}' belongs to the same parent path but is a different leaf key. " +
+                        finding.evidence
+            else ->
+                "Suspicious configuration path '${finding.actual.path}'. " +
+                    "It may be an accidental misplacement or duplication of the existing property " +
+                    "'${finding.relatedExpected.path}'. ${finding.evidence}"
+        }
     }
 
     private fun collectAllConfigProperties(project: Project): List<ConfigProperty> {

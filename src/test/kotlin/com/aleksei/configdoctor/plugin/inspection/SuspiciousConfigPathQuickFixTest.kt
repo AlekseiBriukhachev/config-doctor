@@ -46,6 +46,38 @@ class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test applying the quick fix collapses a shifted wrapper segment`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            """
+            spring:
+              datasource:
+                url: jdbc:postgresql://localhost/db
+            """.trimIndent()
+        )
+        myFixture.configureByText(
+            "application-local.yml",
+            """
+            spring:
+              datasource:
+                jdbc:
+                  <caret>url: jdbc:postgresql://localhost/local-db
+            """.trimIndent()
+        )
+
+        val intention = myFixture.findSingleIntention("Collapse duplicated configuration segment")
+        myFixture.launchAction(intention)
+
+        assertEquals(
+            """
+            spring:
+              datasource:
+                url: jdbc:postgresql://localhost/local-db
+            """.trimIndent(),
+            myFixture.file.text.trim()
+        )
+    }
+
     fun `test no quick fix is offered when the duplicated level has sibling keys`() {
         myFixture.addFileToProject(
             "src/main/resources/application.yml",
@@ -66,12 +98,9 @@ class SuspiciousConfigPathQuickFixTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        // The warning must still be present (the path collision is real)...
         val warnings = myFixture.doHighlighting(com.intellij.lang.annotation.HighlightSeverity.WARNING)
         assertEquals(1, warnings.size)
 
-        // ...but no fix should be offered, since collapsing would be
-        // ambiguous/lossy (section 19).
         val availableFixes = myFixture.getAllQuickFixes("application-local.yml")
             .filter { it.text == "Collapse duplicated configuration segment" }
         assertTrue(availableFixes.isEmpty())
