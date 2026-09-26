@@ -20,7 +20,10 @@ object SpringConfigurationMetadata {
     private val fileName = "spring-configuration-metadata.json"
 
     fun loadKnownPropertyPaths(project: Project): Set<PropertyPath> {
-        val scope = GlobalSearchScope.projectScope(project)
+        // Search both project files and library/classpath files (JARs). Using
+        // an extensive scope increases chance of finding metadata bundled in
+        // dependencies under META-INF.
+        val scope = GlobalSearchScope.everythingScope(project)
         val files = FilenameIndex.getVirtualFilesByName(project, fileName, scope)
         val result = mutableSetOf<PropertyPath>()
 
