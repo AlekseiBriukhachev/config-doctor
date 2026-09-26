@@ -108,6 +108,37 @@ class SuspiciousPathDetectorTest : BasePlatformTestCase() {
         assertTrue(SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties()).isEmpty())
     }
 
+    fun `test metadata-known property flags shifted section when collapsed form is known in metadata`() {
+        myFixture.addFileToProject(
+            "src/main/resources/application-local.yml",
+            """
+            spring:
+              datasource:
+                datasource:
+                  url: jdbc:postgresql://localhost/db
+            """.trimIndent()
+        )
+
+        // No base application.yml providing spring.datasource.url, but the
+        // metadata file declares spring.datasource.url. The detector should
+        // consider metadata as evidence and flag the misplaced section.
+        myFixture.addFileToProject(
+            "src/main/resources/spring-configuration-metadata.json",
+            """
+            { "properties": [ { "name": "spring.datasource.url" } ] }
+            """.trimIndent()
+        )
+
+        val known = com.aleksei.configdoctor.plugin.metadata.SpringConfigurationMetadata.loadKnownPropertyPaths(project)
+        val findings = SuspiciousPathDetector.findSuspiciousPaths(collectAllProperties(), known)
+
+        assertEquals(1, findings.size)
+        val finding = findings.single()
+        assertEquals("spring.datasource.datasource.url", finding.actual.path.toString())
+        assertEquals(EvidenceKind.SPRING_METADATA, finding.evidenceKind)
+        assertTrue(finding.evidence.contains("spring.datasource.url"))
+    }
+
     fun `test a shifted (non-duplicate) section is flagged when the collapsed path already exists`() {
         myFixture.addFileToProject(
             "src/main/resources/application.yml",

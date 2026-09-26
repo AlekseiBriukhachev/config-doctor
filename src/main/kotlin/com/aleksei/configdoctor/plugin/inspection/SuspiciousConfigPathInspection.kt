@@ -31,7 +31,8 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         val project = holder.project
         val findings: List<SuspiciousPathFinding> by lazy {
-            SuspiciousPathDetector.findSuspiciousPaths(collectAllConfigProperties(project))
+            val known = com.aleksei.configdoctor.plugin.metadata.SpringConfigurationMetadata.loadKnownPropertyPaths(project)
+            SuspiciousPathDetector.findSuspiciousPaths(collectAllConfigProperties(project), known)
         }
 
         return object : PsiElementVisitor() {
