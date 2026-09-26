@@ -83,12 +83,10 @@ data class ConfigFileName(
 
             if (qualifiers.any { it.isBlank() }) return null
 
-            // Normalize qualifier tokens to lowercase for consistent comparisons
-            val norm = qualifiers.map { it.lowercase() }
-
-            val profile = norm.lastOrNull() ?: return null
-            val step = norm.dropLast(1).lastOrNull()
-            val appType = norm.dropLast(2).lastOrNull()
+            // Preserve original qualifier casing (tests expect original case like "ONLINE"/"LOCAL").
+            val profile = qualifiers.lastOrNull() ?: return null
+            val step = qualifiers.dropLast(1).lastOrNull()
+            val appType = qualifiers.dropLast(2).lastOrNull()
 
             return ConfigFileName(base, step?.takeIf { it.isNotBlank() }, appType?.takeIf { it.isNotBlank() }, profile, ext)
         }
