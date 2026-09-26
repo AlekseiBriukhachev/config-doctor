@@ -40,29 +40,34 @@ data class ConfigFileName(
          * compatibility with the existing project model.
          */
         fun parse(fileName: String): ConfigFileName? {
+            // Be case-insensitive for both the extension and the base name so files
+            // like "application.DEFAULT.YML" or "Application-local.Yaml" are
+            // recognized correctly.
+            val lc = fileName.lowercase()
             val ext = when {
-                fileName.endsWith(".yaml") -> "yaml"
-                fileName.endsWith(".yml") -> "yml"
+                lc.endsWith(".yaml") -> "yaml"
+                lc.endsWith(".yml") -> "yml"
                 else -> return null
             }
 
             val base = "application"
-            val nameWithoutExt = fileName.removeSuffix(".$ext")
+            // Remove the extension by length instead of relying on removeSuffix with exact case.
+            val nameWithoutExt = fileName.substring(0, fileName.length - ext.length - 1)
 
-            if (nameWithoutExt == base) {
+            if (nameWithoutExt.equals(base, ignoreCase = true)) {
                 return ConfigFileName(base, null, null, null, ext)
             }
 
-            if (!nameWithoutExt.startsWith(base)) {
+            if (!nameWithoutExt.regionMatches(0, base, 0, base.length, ignoreCase = true)) {
                 return null
             }
 
-            val suffix = nameWithoutExt.removePrefix(base)
+            val suffix = nameWithoutExt.substring(base.length)
             val qualifiers = when {
                 suffix.startsWith("-") -> {
                     val profile = suffix.removePrefix("-")
                     if (profile.isBlank()) return null
-                    listOf(profile)
+                    listOf(profile.trim())
                 }
                 suffix.startsWith(".") -> {
                     val profileParts = suffix.removePrefix(".")
@@ -78,9 +83,12 @@ data class ConfigFileName(
 
             if (qualifiers.any { it.isBlank() }) return null
 
-            val profile = qualifiers.lastOrNull() ?: return null
-            val step = qualifiers.dropLast(1).lastOrNull()
-            val appType = qualifiers.dropLast(2).lastOrNull()
+            // Normalize qualifier tokens to lowercase for consistent comparisons
+            val norm = qualifiers.map { it.lowercase() }
+
+            val profile = norm.lastOrNull() ?: return null
+            val step = norm.dropLast(1).lastOrNull()
+            val appType = norm.dropLast(2).lastOrNull()
 
             return ConfigFileName(base, step?.takeIf { it.isNotBlank() }, appType?.takeIf { it.isNotBlank() }, profile, ext)
         }
