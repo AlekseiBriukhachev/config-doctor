@@ -46,7 +46,13 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
 
                 val finding = findings.firstOrNull { it.actual.psiElement == keyValue } ?: return
 
-                val fix = when (finding.evidenceKind) {
+                val metadataEntry = if (finding.evidenceKind == EvidenceKind.SPRING_METADATA) {
+                    com.aleksei.configdoctor.plugin.metadata.SpringConfigurationMetadataService
+                        .getInstance(project)
+                        .knownMetadata()[finding.relatedExpected.path]
+                } else null
+
+                val primaryFix = when (finding.evidenceKind) {
                     EvidenceKind.PROFILE_OVERRIDE_RELATIONSHIP -> {
                         val expectedLeaf = finding.relatedExpected.path.segments.lastOrNull()
                         if (expectedLeaf != null && expectedLeaf != keyValue.keyText) {
@@ -62,11 +68,13 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
                     }
                 }
 
+                val docFix = metadataEntry?.let { ShowPropertyMetadataQuickFix(it) }
+
                 holder.registerProblem(
                     keyValue,
-                    buildMessage(finding),
+                    buildMessage(finding, project),
                     ProblemHighlightType.WARNING,
-                    *listOfNotNull(fix).toTypedArray()
+                    *listOfNotNull(primaryFix, docFix).toTypedArray()
                 )
             }
         }
@@ -76,12 +84,32 @@ class SuspiciousConfigPathInspection : LocalInspectionTool() {
      * Builds a warning message that names both the suspicious path and the known
      * property it appears to correspond to.
      */
-    private fun buildMessage(finding: SuspiciousPathFinding): String {
+    private fun buildMessage(finding: SuspiciousPathFinding, project: Project): String {
+        val metadataEntry = if (finding.evidenceKind == EvidenceKind.SPRING_METADATA) {
+            com.aleksei.configdoctor.plugin.metadata.SpringConfigurationMetadataService
+                .getInstance(project)
+                .knownMetadata()[finding.relatedExpected.path]
+        } else null
+
         return when (finding.evidenceKind) {
             EvidenceKind.PROFILE_OVERRIDE_RELATIONSHIP ->
                 "This property does not override '${finding.relatedExpected.path}'. " +
                     "The profile value '${finding.actual.path}' belongs to the same parent path but is a different leaf key. " +
                         finding.evidence
+            EvidenceKind.SPRING_METADATA -> {
+                val sb = StringBuilder()
+                sb.append("Suspicious configuration path '${finding.actual.path}'. ")
+                sb.append("Removing the misplaced segment yields '${finding.relatedExpected.path}', which is a known Spring Boot property.")
+                metadataEntry?.let {
+                    sb.append("\nProperty: ${it.name}")
+                    it.type?.let { t -> sb.append(" (type: $t)") }
+                    it.defaultValue?.let { dv -> sb.append("\nDefault: $dv") }
+                    it.deprecatedInfo?.let { dp -> sb.append("\nDeprecated: $dp") }
+                    it.description?.let { d -> sb.append(" \n— $d") }
+                }
+                sb.append(" ${finding.evidence}")
+                sb.toString()
+            }
             else ->
                 "Suspicious configuration path '${finding.actual.path}'. " +
                     "It may be an accidental misplacement or duplication of the existing property " +

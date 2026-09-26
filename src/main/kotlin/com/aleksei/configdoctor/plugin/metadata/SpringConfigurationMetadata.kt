@@ -15,35 +15,79 @@ import com.intellij.psi.search.GlobalSearchScope
  * has a well-known shape and extracting the "name" fields is sufficient for
  * evidence-based detection.
  */
+data class MetadataEntry(
+    val name: String,
+    val type: String?,
+    val description: String?,
+    val defaultValue: String?,
+    val deprecatedInfo: String?
+)
+
 object SpringConfigurationMetadata {
 
     private val fileName = "spring-configuration-metadata.json"
 
-    fun loadKnownPropertyPaths(project: Project): Set<PropertyPath> {
-        // Search both project files and library/classpath files (JARs). Using
-        // an extensive scope increases chance of finding metadata bundled in
-        // dependencies under META-INF.
+    /**
+     * Loads a map from property path -> metadata entry (type + description) by
+     * scanning spring-configuration-metadata.json files found in project and
+     * in dependencies.
+     */
+    fun loadKnownPropertyMetadata(project: Project): Map<PropertyPath, MetadataEntry> {
         val scope = GlobalSearchScope.everythingScope(project)
         val files = FilenameIndex.getVirtualFilesByName(project, fileName, scope)
-        val result = mutableSetOf<PropertyPath>()
+        val result = mutableMapOf<PropertyPath, MetadataEntry>()
+
+        // Pattern to capture property objects roughly: use DOTALL via (?s)
+        val objRegex = "(?s)\\{.*?\"name\"\\s*:\\s*\"([^\"]+)\".*?\\}".toRegex()
+        val typeRegex = "\"type\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+        val descRegex = "\"description\"\\s*:\\s*\"([^\"]+)\"".toRegex()
 
         for (vf in files) {
             try {
                 val text = VfsUtilCore.loadText(vf)
-                // Find occurrences of "name" : "some.property.path"
-                val regex = "\"name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                for (m in regex.findAll(text)) {
-                    val name = m.groupValues[1].trim()
-                    if (name.isNotEmpty()) {
+                val json = com.google.gson.JsonParser.parseString(text)
+                val props = json.asJsonObject.getAsJsonArray("properties") ?: continue
+                for (el in props) {
+                    try {
+                        val obj = el.asJsonObject
+                        val name = obj.getAsJsonPrimitive("name")?.asString?.trim() ?: continue
+                        val type = obj.getAsJsonPrimitive("type")?.asString
+                        val desc = obj.getAsJsonPrimitive("description")?.asString
+                        val defaultVal = obj.getAsJsonPrimitive("defaultValue")?.asString
+                        var deprecatedInfo: String? = null
+                        if (obj.has("deprecated")) {
+                            try {
+                                val deprecatedEl = obj.get("deprecated")
+                                if (deprecatedEl.isJsonPrimitive && deprecatedEl.asJsonPrimitive.isBoolean) {
+                                    if (deprecatedEl.asBoolean) deprecatedInfo = "deprecated"
+                                } else if (deprecatedEl.isJsonObject) {
+                                    deprecatedInfo = deprecatedEl.asJsonObject.getAsJsonPrimitive("reason")?.asString
+                                }
+                            } catch (_: Throwable) {
+                            }
+                        } else if (obj.has("deprecation")) {
+                            try {
+                                val depObj = obj.getAsJsonObject("deprecation")
+                                deprecatedInfo = depObj.getAsJsonPrimitive("reason")?.asString
+                            } catch (_: Throwable) {
+                            }
+                        }
                         val segments = name.split('.').map { it.trim() }.filter { it.isNotEmpty() }
-                        if (segments.isNotEmpty()) result.add(PropertyPath(segments))
+                        if (segments.isNotEmpty()) {
+                            result[PropertyPath(segments)] = MetadataEntry(name, type, desc, defaultVal, deprecatedInfo)
+                        }
+                    } catch (_: Throwable) {
+                        // skip malformed entry
                     }
                 }
             } catch (e: Exception) {
-                // Be conservative: ignore malformed files rather than failing.
+                // Ignore malformed files and continue
             }
         }
 
         return result
     }
+
+    // Backwards-compatible loader that returns just the set of property paths
+    fun loadKnownPropertyPaths(project: Project): Set<PropertyPath> = loadKnownPropertyMetadata(project).keys
 }

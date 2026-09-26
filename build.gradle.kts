@@ -38,6 +38,9 @@ dependencies {
         // See: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-faq.html
         testImplementation("junit:junit:4.13.2")
         testImplementation("org.opentest4j:opentest4j:1.3.0")
+
+        // JSON parser for robust metadata extraction
+        implementation("com.google.code.gson:gson:2.10.1")
 }
 
 kotlin {
