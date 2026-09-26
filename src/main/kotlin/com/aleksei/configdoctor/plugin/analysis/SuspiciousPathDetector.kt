@@ -14,12 +14,12 @@ import com.aleksei.configdoctor.plugin.model.PropertyPath
  */
 object SuspiciousPathDetector {
 
-    fun findSuspiciousPaths(properties: Collection<ConfigProperty>): List<SuspiciousPathFinding> {
+    fun findSuspiciousPaths(properties: Collection<ConfigProperty>, knownPaths: Set<PropertyPath> = emptySet()): List<SuspiciousPathFinding> {
         val byPath: Map<PropertyPath, ConfigProperty> = properties.associateBy { it.path }
         val findings = mutableListOf<SuspiciousPathFinding>()
 
         for (candidate in properties) {
-            findings += findCollapsedSegmentMatches(candidate, byPath)
+            findings += findCollapsedSegmentMatches(candidate, byPath, knownPaths)
             if (candidate.profile != null) {
                 findings += findProfileOverrideMismatch(candidate, byPath)
             }
@@ -30,7 +30,8 @@ object SuspiciousPathDetector {
 
     private fun findCollapsedSegmentMatches(
         candidate: ConfigProperty,
-        byPath: Map<PropertyPath, ConfigProperty>
+        byPath: Map<PropertyPath, ConfigProperty>,
+        knownPaths: Set<PropertyPath>
     ): List<SuspiciousPathFinding> {
         val segments = candidate.path.segments
         val findings = mutableListOf<SuspiciousPathFinding>()
@@ -41,25 +42,44 @@ object SuspiciousPathDetector {
             val collapsedPath = PropertyPath(collapsedSegments)
             if (collapsedPath == candidate.path) continue
 
-            val match = byPath[collapsedPath] ?: continue
+            val match = byPath[collapsedPath]
             val removed = segments[i]
             val isDuplicate = i < segments.size - 1 && segments[i] == segments[i + 1]
 
-            findings += SuspiciousPathFinding(
-                actual = candidate,
-                relatedExpected = match,
-                evidenceKind = EvidenceKind.STRONG_PROJECT_RELATIONSHIP,
-                evidence = buildString {
-                    if (isDuplicate) {
-                        append("Removing the duplicated adjacent segment '${removed}' from ")
-                    } else {
-                        append("Removing the misplaced segment '${removed}' from ")
+            if (match != null) {
+                findings += SuspiciousPathFinding(
+                    actual = candidate,
+                    relatedExpected = match,
+                    evidenceKind = EvidenceKind.STRONG_PROJECT_RELATIONSHIP,
+                    evidence = buildString {
+                        if (isDuplicate) {
+                            append("Removing the duplicated adjacent segment '${removed}' from ")
+                        } else {
+                            append("Removing the misplaced segment '${removed}' from ")
+                        }
+                        append("'${candidate.path}' yields '${match.path}', which is an existing ")
+                        append("property already used elsewhere in this project")
+                        append(if (match.profile != null) " (profile: ${match.profile})." else " (default profile).")
                     }
-                    append("'${candidate.path}' yields '${match.path}', which is an existing ")
-                    append("property already used elsewhere in this project")
-                    append(if (match.profile != null) " (profile: ${match.profile})." else " (default profile).")
-                }
-            )
+                )
+            } else if (collapsedPath in knownPaths) {
+                // Create a lightweight synthetic relatedExpected using the candidate's
+                // PSI/location so messages and quick-fixes can reference a file.
+                val synthetic = candidate.copy(path = collapsedPath, profile = null)
+                findings += SuspiciousPathFinding(
+                    actual = candidate,
+                    relatedExpected = synthetic,
+                    evidenceKind = EvidenceKind.SPRING_METADATA,
+                    evidence = buildString {
+                        if (isDuplicate) {
+                            append("Removing the duplicated adjacent segment '${removed}' from ")
+                        } else {
+                            append("Removing the misplaced segment '${removed}' from ")
+                        }
+                        append("'${candidate.path}' yields '${collapsedPath}', which is a known Spring Boot property according to configuration metadata.")
+                    }
+                )
+            }
         }
 
         return findings

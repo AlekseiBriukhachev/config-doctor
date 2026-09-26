@@ -8,7 +8,7 @@ It is designed for the case where YAML is syntactically valid, but the property 
 
 The plugin scans Spring Boot configuration files in the project and inspects the logical property paths generated from YAML PSI.
 
-It warns when a property path is suspicious because it structurally matches a real property elsewhere in the project after removing one nested segment.
+It warns when a property path is suspicious because it structurally matches a real property elsewhere in the project after removing one nested segment. When available from Spring metadata, the inspection surfaces property documentation (type, default value and deprecation information) and offers a "Show property documentation" Quick Fix to view the full description.
 
 Typical example:
 
@@ -59,7 +59,7 @@ The plugin recognizes Spring Boot-style configuration files such as:
 - `application-local.yaml`
 - `application-prod.yml`
 - `application-prod.yaml`
-- dot-qualified variants like `application.ONLINE.yml`
+- dot-qualified variants like `application.local.yml`
 
 ## How to run
 

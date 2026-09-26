@@ -17,5 +17,11 @@ enum class EvidenceKind {
      * The candidate property is not a valid override for the base property
      * because it belongs to a different leaf key under the same parent path.
      */
-    PROFILE_OVERRIDE_RELATIONSHIP
+    PROFILE_OVERRIDE_RELATIONSHIP,
+
+    /**
+     * The candidate path collapses into a property that is present in
+     * Spring's configuration metadata (spring-configuration-metadata.json).
+     */
+    SPRING_METADATA
 }
